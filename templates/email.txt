@@ -1,0 +1,16 @@
+AI 데일리 브리핑 | {{ send_date.strftime('%Y년 %m월 %d일') }}
+오늘의 AI 아티클 {{ summaries|length }}선
+==============================================
+
+{% for s in summaries %}
+{{ loop.index }}. [중요도: {{ s.importance }}] {{ s.article.title }}
+   출처: {{ s.article.source }} | 읽기: {{ s.read_time_min }}분
+   {{ s.one_liner }}
+   --------------------------------------------------
+   {{ s.body }}
+
+   원문: {{ s.article.url }}
+
+{% endfor %}
+==============================================
+이 메일은 자동 발송됩니다.

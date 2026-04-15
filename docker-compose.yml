@@ -1,0 +1,10 @@
+services:
+  article-mailer:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+    environment:
+      - DATABASE_URL=sqlite:////app/data/article_mailer.db
