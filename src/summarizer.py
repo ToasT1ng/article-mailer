@@ -76,6 +76,7 @@ class Summarizer:
                     contents=content,
                     config=types.GenerateContentConfig(
                         system_instruction=SYSTEM_PROMPT,
+                        response_mime_type="application/json",
                         max_output_tokens=1024,
                     ),
                 )
