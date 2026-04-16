@@ -56,7 +56,7 @@ class Mailer:
         text_body: str,
         retry: int = 3,
     ) -> None:
-        recipients = self._settings.recipient_emails
+        recipients = self._settings.recipient_list
         if not recipients:
             log.warning("mailer.skip.no_recipients")
             return

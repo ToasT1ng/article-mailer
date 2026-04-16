@@ -35,7 +35,7 @@ class Pipeline:
             self._repo.record_log(
                 run_at=run_at,
                 article_count=0,
-                recipient_count=len(self._settings.recipient_emails),
+                recipient_count=len(self._settings.recipient_list),
                 status="failed",
                 error_message="수집된 아티클 없음",
             )
@@ -51,7 +51,7 @@ class Pipeline:
             self._repo.record_log(
                 run_at=run_at,
                 article_count=len(articles),
-                recipient_count=len(self._settings.recipient_emails),
+                recipient_count=len(self._settings.recipient_list),
                 status="failed",
                 error_message="요약 생성 실패",
             )
@@ -78,7 +78,7 @@ class Pipeline:
         self._repo.record_log(
             run_at=run_at,
             article_count=len(summaries),
-            recipient_count=len(self._settings.recipient_emails),
+            recipient_count=len(self._settings.recipient_list),
             status=status,
             error_message=error_msg,
         )

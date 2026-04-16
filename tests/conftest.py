@@ -47,6 +47,6 @@ def test_settings() -> Settings:
         gemini_api_key="test-key",
         smtp_user="test@gmail.com",
         smtp_password="test-password",
-        recipient_emails=["recipient@example.com"],
+        recipient_emails="recipient@example.com",
         database_url="sqlite:///:memory:",
     )

@@ -27,18 +27,17 @@ class Settings(BaseSettings):
     smtp_user: str = ""
     smtp_password: str = ""
 
-    # 수신자 (콤마 구분 문자열 → list)
-    recipient_emails: list[str] = []
+    # 수신자 (콤마 구분)
+    recipient_emails: str = ""
 
     # DB
     database_url: str = "sqlite:///./data/article_mailer.db"
 
-    @field_validator("recipient_emails", mode="before")
-    @classmethod
-    def split_emails(cls, v: str | list) -> list[str]:
-        if isinstance(v, str):
-            return [e.strip() for e in v.split(",") if e.strip()]
-        return v
+    @property
+    def recipient_list(self) -> list[str]:
+        if not self.recipient_emails:
+            return []
+        return [e.strip() for e in self.recipient_emails.split(",") if e.strip()]
 
 
 _settings: Settings | None = None

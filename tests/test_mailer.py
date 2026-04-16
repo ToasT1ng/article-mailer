@@ -31,7 +31,7 @@ class TestMailer:
         # 발송 인자 확인
         args = mock_smtp_instance.sendmail.call_args[0]
         assert test_settings.smtp_user == args[0]
-        assert test_settings.recipient_emails == args[1]
+        assert test_settings.recipient_list == args[1]
 
     def test_send_subject_format(self, test_settings, sample_summary):
         """이메일 제목 형식 확인."""
