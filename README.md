@@ -22,10 +22,17 @@
 
 ## 설정 방법
 
-1. `.env.example` 파일을 복사하여 `.env` 파일을 생성합니다.
-2. 각 항목에 맞는 설정을 입력합니다.
+1. `.env.example` 파일을 참고하여 `.env` 파일을 생성합니다.
+   ```bash
+   cp .env.example .env
+   ```
+   또는 개발용 템플릿(수신자 사전 설정)을 사용할 수 있습니다.
+   ```bash
+   cp .env.dev .env
+   ```
+2. `.env` 파일에 실제 크리덴셜을 입력합니다.
 
-* `GEMINI_API_KEY`: Google Gemini API 키
+* `GEMINI_API_KEY`: Google Gemini API 키 ([AI Studio](https://aistudio.google.com/apikey)에서 발급)
 * `SMTP_USER`, `SMTP_PASSWORD`: 발송용 Gmail 계정과 앱 비밀번호
 * `RECIPIENT_EMAILS`: 수신자 이메일 주소 (쉼표로 구분하여 여러 명 지정 가능)
 * `SEND_HOUR`, `SEND_MINUTE`: 메일 발송을 원하는 시각
