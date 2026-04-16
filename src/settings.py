@@ -17,9 +17,9 @@ class Settings(BaseSettings):
     article_count: int = 5
     article_language: str = "ko"
 
-    # Claude API
-    anthropic_api_key: str = ""
-    claude_model: str = "claude-sonnet-4-6"
+    # Gemini API
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-2.5-flash"
 
     # SMTP
     smtp_host: str = "smtp.gmail.com"

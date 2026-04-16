@@ -60,6 +60,13 @@ class TestSummarizerParseResponse:
         assert len(summary.one_liner) <= 50
 
 
+def _make_gemini_response(text: str) -> MagicMock:
+    response = MagicMock()
+    response.text = text
+    response.usage_metadata = MagicMock(total_token_count=100)
+    return response
+
+
 class TestSummarizerSummarizeAll:
     @pytest.mark.asyncio
     async def test_summarize_all_parallel(self, test_settings):
@@ -77,39 +84,29 @@ class TestSummarizerSummarizeAll:
             for i in range(3)
         ]
 
-        mock_response = MagicMock()
-        mock_response.content = [
-            MagicMock(
-                type="text",
-                text=json.dumps(
-                    {
-                        "one_liner": "요약",
-                        "body": "본문",
-                        "importance": "중",
-                        "read_time_min": 3,
-                    }
-                ),
-            )
-        ]
-        mock_response.usage = MagicMock(
-            cache_read_input_tokens=0, cache_creation_input_tokens=100
+        response_text = json.dumps(
+            {
+                "one_liner": "요약",
+                "body": "본문",
+                "importance": "중",
+                "read_time_min": 3,
+            }
         )
-
-        mock_client = AsyncMock()
-        mock_client.messages.create = AsyncMock(return_value=mock_response)
+        mock_response = _make_gemini_response(response_text)
+        mock_generate = AsyncMock(return_value=mock_response)
 
         summarizer = Summarizer(test_settings)
-        summarizer._client = mock_client
+        summarizer._client = MagicMock()
+        summarizer._client.aio.models.generate_content = mock_generate
 
         summaries = await summarizer.summarize_all(articles)
 
         assert len(summaries) == 3
-        assert mock_client.messages.create.call_count == 3
+        assert mock_generate.call_count == 3
 
     @pytest.mark.asyncio
     async def test_summarize_all_skips_failed(self, test_settings):
         """요약 실패한 아티클은 결과에서 제외."""
-        import anthropic
         from datetime import datetime, timezone
 
         articles = [
@@ -129,40 +126,26 @@ class TestSummarizerSummarizeAll:
             ),
         ]
 
-        mock_response = MagicMock()
-        mock_response.content = [
-            MagicMock(
-                type="text",
-                text=json.dumps(
-                    {
-                        "one_liner": "요약",
-                        "body": "본문",
-                        "importance": "중",
-                        "read_time_min": 3,
-                    }
-                ),
+        good_response = _make_gemini_response(
+            json.dumps(
+                {
+                    "one_liner": "요약",
+                    "body": "본문",
+                    "importance": "중",
+                    "read_time_min": 3,
+                }
             )
-        ]
-        mock_response.usage = MagicMock(
-            cache_read_input_tokens=0, cache_creation_input_tokens=100
         )
 
         async def side_effect(*args, **kwargs):
-            messages = kwargs.get("messages", args[0] if args else [])
-            user_content = messages[0]["content"] if messages else ""
-            if "https://example.com/bad" in user_content:
-                raise anthropic.APIStatusError(
-                    "Server error",
-                    response=MagicMock(status_code=500),
-                    body={},
-                )
-            return mock_response
-
-        mock_client = AsyncMock()
-        mock_client.messages.create = AsyncMock(side_effect=side_effect)
+            contents = kwargs.get("contents", args[1] if len(args) > 1 else "")
+            if "https://example.com/bad" in contents:
+                raise Exception("Server error")
+            return good_response
 
         summarizer = Summarizer(test_settings)
-        summarizer._client = mock_client
+        summarizer._client = MagicMock()
+        summarizer._client.aio.models.generate_content = AsyncMock(side_effect=side_effect)
 
         summaries = await summarizer.summarize_all(articles)
         assert len(summaries) == 1

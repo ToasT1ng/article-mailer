@@ -15,7 +15,7 @@
 |---|---|---|
 | F-1 | 매일 지정된 시각에 자동 실행 | Must |
 | F-2 | AI 관련 최신 아티클을 N개 수집 (N은 설정값) | Must |
-| F-3 | 각 아티클 본문을 Claude API로 요약 | Must |
+| F-3 | 각 아티클 본문을 Gemini API로 요약 | Must |
 | F-4 | 요약 결과를 HTML 이메일로 발송 | Must |
 | F-5 | 이미 발송된 아티클 중복 제외 | Must |
 | F-6 | 본문 크롤링 실패 시 graceful fallback | Must |
@@ -25,7 +25,7 @@
 ### 비기능 요구사항
 
 - 단일 서버(또는 로컬 머신)에서 Docker로 실행 가능
-- 하루 1회 실행 기준 Claude API 비용 최소화
+- 하루 1회 실행 기준 Gemini API 비용 최소화
 - 환경변수만으로 모든 설정 변경 가능 (코드 수정 불필요)
 
 ---
@@ -35,13 +35,13 @@
 ### 언어 및 런타임
 
 **Python 3.12**
-- 이유: `asyncio` 네이티브 지원, RSS/HTTP/이메일 생태계 성숙도, Claude SDK 공식 지원
+- 이유: `asyncio` 네이티브 지원, RSS/HTTP/이메일 생태계 성숙도, Gemini SDK 공식 지원
 
 ### 의존성 목록
 
 | 라이브러리 | 버전 | 용도 | 선택 이유 |
 |---|---|---|---|
-| `anthropic` | latest | Claude API 클라이언트 | 공식 SDK, prompt caching 지원 |
+| `google-genai` | latest | Gemini API 클라이언트 | 공식 SDK, 무료 티어 지원 |
 | `pydantic-settings` | ^2 | 설정 관리 (.env 파싱) | 타입 안전한 환경변수 바인딩, 검증 내장 |
 | `feedparser` | ^6 | RSS/Atom 피드 파싱 | 사실상 표준, 인코딩/날짜 처리 자동 |
 | `httpx` | ^0.27 | 비동기 HTTP 클라이언트 | async/await 네이티브, timeout/retry 설정 용이 |
@@ -79,12 +79,12 @@
 
 **결론: Gmail SMTP 기본 채택**, 환경변수로 SMTP 호스트를 교체하면 SES로 전환 가능하게 설계.
 
-### Claude API 사용 전략
+### Gemini API 사용 전략
 
-- 모델: `claude-sonnet-4-6` (품질·비용 균형)
-- **Prompt Caching 적용**: 시스템 프롬프트를 캐싱하여 아티클 N개 반복 호출 시 비용 절감
+- 모델: `gemini-2.5-flash` (무료 티어: 1,500 req/일)
 - 호출 방식: 아티클별 개별 호출 (병렬 `asyncio.gather`)
-- 예상 비용 (아티클 5개 기준): 입력 ~3K tokens × 5 = 15K tokens/일 → 약 $0.01/일 미만
+- JSON 응답 모드 사용 (`response_mime_type="application/json"`)
+- 예상 비용: 무료 티어 내 충분 (하루 5~10건 기준)
 
 ---
 
@@ -103,7 +103,7 @@
 │  │  CLI      │────────────▶│  └────┬─────┘               │  │
 │  │(수동 실행) │  trigger    │       │ articles[]          │  │
 │  └───────────┘             │  ┌────▼─────┐               │  │
-│                            │  │Summarizer│ Claude API     │  │
+│                            │  │Summarizer│ Gemini API    │  │
 │                            │  │          │ (async batch)  │  │
 │                            │  └────┬─────┘               │  │
 │                            │       │ summaries[]         │  │
@@ -144,8 +144,8 @@
       }
 
 [3] Summarizer.summarize_all(articles) → List[Summary]  [asyncio.gather]
-      ├── 각 Article에 대해 Claude API 호출 (병렬)
-      ├── system prompt: cache_control=ephemeral (Prompt Caching)
+      ├── 각 Article에 대해 Gemini API 호출 (병렬)
+      ├── JSON 응답 모드로 구조화된 출력
       └── 응답 파싱 → Summary
 
       Summary {
@@ -199,9 +199,9 @@ class Settings(BaseSettings):
     article_count: int = 5      # 수집할 아티클 수 (1~20)
     article_language: str = "ko"  # 요약 언어
 
-    # Claude API
-    anthropic_api_key: str
-    claude_model: str = "claude-sonnet-4-6"
+    # Gemini API
+    gemini_api_key: str
+    gemini_model: str = "gemini-2.5-flash"
 
     # SMTP
     smtp_host: str = "smtp.gmail.com"
@@ -232,9 +232,9 @@ TIMEZONE=Asia/Seoul
 ARTICLE_COUNT=5          # 원하는 숫자로 변경 (1~20)
 ARTICLE_LANGUAGE=ko
 
-# Claude API
-ANTHROPIC_API_KEY=sk-ant-...
-CLAUDE_MODEL=claude-sonnet-4-6
+# Gemini API
+GEMINI_API_KEY=your-gemini-api-key
+GEMINI_MODEL=gemini-2.5-flash
 
 # SMTP (Gmail 기준)
 SMTP_HOST=smtp.gmail.com
@@ -274,7 +274,7 @@ CREATE TABLE send_logs (
 
 ---
 
-## 9. Claude API 프롬프트 설계
+## 9. Gemini API 프롬프트 설계
 
 ```python
 SYSTEM_PROMPT = """
@@ -292,7 +292,7 @@ SYSTEM_PROMPT = """
 - 독자는 AI 업계 종사자. 기술 용어를 쉽게 설명하지 않아도 됨
 - 중요도 기준: 상=업계 패러다임 변화, 중=주목할 기술/비즈니스, 하=참고 수준
 - 본문이 없으면 제목과 설명만으로 추론하여 요약
-""" # cache_control=ephemeral 적용
+""" # JSON 응답 모드로 전달
 ```
 
 ---
@@ -331,7 +331,7 @@ SYSTEM_PROMPT = """
 |---|---|
 | 특정 소스 RSS fetch 실패 | 해당 소스 스킵, 다음 소스로 보충 |
 | 아티클 본문 크롤링 실패 | RSS `description` 필드로 fallback |
-| Claude API 타임아웃 | 최대 2회 재시도, 실패 시 해당 아티클 제외 |
+| Gemini API 타임아웃 | 최대 2회 재시도, 실패 시 해당 아티클 제외 |
 | 수집 아티클이 N개 미만 | 가용한 아티클만으로 발송 (최소 1개 이상이면 발송) |
 | SMTP 발송 실패 | 최대 3회 재시도 후 실패 로그 기록 |
 | 모든 아티클 수집 실패 | 발송 취소, `send_logs`에 `failed` 기록 |
@@ -355,7 +355,7 @@ article-mailer/
 │   │   ├── hacker_news.py
 │   │   ├── arxiv.py
 │   │   └── rss.py          # 범용 RSS 수집기
-│   ├── summarizer.py       # Claude API 요약 (async)
+│   ├── summarizer.py       # Gemini API 요약 (async)
 │   ├── mailer.py           # SMTP 발송
 │   └── db/
 │       ├── __init__.py
@@ -406,7 +406,7 @@ docker compose up -d
 |---|---|---|
 | 1 | 프로젝트 초기화 (pyproject.toml, settings, DB) | `python -m src.main` 실행됨 |
 | 2 | Collector 구현 (Hacker News + RSS) | 아티클 목록 정상 수집 |
-| 3 | Summarizer 구현 (Claude API, async) | 요약 JSON 정상 파싱 |
+| 3 | Summarizer 구현 (Gemini API, async) | 요약 JSON 정상 파싱 |
 | 4 | Mailer 구현 (SMTP + Jinja2 템플릿) | 실제 메일 수신 확인 |
 | 5 | Pipeline + Scheduler 연결 | 자동 발송 확인 |
 | 6 | 에러 처리 + 중복 방지 DB | 재실행 시 중복 없음 확인 |

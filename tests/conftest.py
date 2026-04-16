@@ -44,7 +44,7 @@ def sample_summary(sample_article: Article) -> Summary:
 @pytest.fixture
 def test_settings() -> Settings:
     return Settings(
-        anthropic_api_key="test-key",
+        gemini_api_key="test-key",
         smtp_user="test@gmail.com",
         smtp_password="test-password",
         recipient_emails=["recipient@example.com"],

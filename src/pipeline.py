@@ -44,7 +44,7 @@ class Pipeline:
         # 2. 본문 크롤링 (병렬)
         articles = await self._crawl_contents(articles)
 
-        # 3. Claude API 요약
+        # 3. Gemini API 요약
         summaries = await self._summarizer.summarize_all(articles)
         if not summaries:
             log.error("pipeline.no_summaries")

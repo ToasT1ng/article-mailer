@@ -4,13 +4,13 @@
 
 ## 프로젝트 개요
 
-매일 AI 관련 아티클을 수집하고 Claude API로 요약하여 이메일로 발송하는 Python 자동화 도구.
+매일 AI 관련 아티클을 수집하고 Gemini API로 요약하여 이메일로 발송하는 Python 자동화 도구.
 설계 문서는 `docs/design.md`에 있으며, 모든 구현은 이 문서를 따른다.
 
 ## 기술 스택
 
 - Python 3.12+, asyncio 기반 비동기 처리
-- `anthropic` SDK (Prompt Caching 적용)
+- `google-genai` SDK (Gemini API)
 - `pydantic-settings` (환경변수 설정)
 - `feedparser` + `httpx` (RSS/HTTP 수집)
 - `beautifulsoup4` + `lxml` (본문 크롤링)
@@ -37,8 +37,8 @@
 - 모든 설정은 `src/settings.py`의 `Settings` 클래스를 통해 환경변수로 주입. 하드코딩 금지.
 - 수집기는 `AbstractCollector`를 상속하고 `async def fetch() -> list[Article]`을 구현
 - 외부 API 호출은 반드시 `asyncio.gather`로 병렬 처리
-- Claude API 호출 시 시스템 프롬프트에 `cache_control: {"type": "ephemeral"}` 적용 (비용 절감)
-- SMTP 발송과 Claude API 호출은 재시도 로직 포함 (exponential backoff)
+- Gemini API 호출 시 JSON 응답 모드 사용
+- SMTP 발송과 Gemini API 호출은 재시도 로직 포함 (exponential backoff)
 - DB 중복 체크: `ArticleRepository.filter_unsent()`로 이미 발송된 URL 제외
 
 ## 테스트 규칙
@@ -46,7 +46,7 @@
 - `pytest-asyncio` mode: `auto`
 - 외부 HTTP 요청은 `httpx_mock` (pytest-httpx) 또는 `unittest.mock.AsyncMock`으로 모킹
 - 테스트 공통 fixture는 `tests/conftest.py`에 정의
-- Claude API 호출 테스트 시 `AsyncMock`으로 `summarizer._client`를 교체
+- Gemini API 호출 테스트 시 `AsyncMock`으로 `summarizer._client`를 교체
 
 ## DB 마이그레이션
 

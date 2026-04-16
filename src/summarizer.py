@@ -4,8 +4,9 @@ import re
 from dataclasses import dataclass
 from typing import Literal
 
-import anthropic
 import structlog
+from google import genai
+from google.genai import types
 
 from src.collector.base import Article
 from src.settings import Settings
@@ -40,7 +41,7 @@ class Summary:
 class Summarizer:
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
-        self._client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+        self._client = genai.Client(api_key=settings.gemini_api_key)
 
     async def summarize_all(self, articles: list[Article]) -> list[Summary]:
         """아티클 목록을 병렬로 요약한다."""
@@ -70,33 +71,27 @@ class Summarizer:
 
         for attempt in range(retry + 1):
             try:
-                response = await self._client.messages.create(
-                    model=self._settings.claude_model,
-                    max_tokens=1024,
-                    system=[
-                        {
-                            "type": "text",
-                            "text": SYSTEM_PROMPT,
-                            # Prompt Caching: 시스템 프롬프트는 고정이므로 캐싱 적용
-                            "cache_control": {"type": "ephemeral"},
-                        }
-                    ],
-                    messages=[{"role": "user", "content": content}],
+                response = await self._client.aio.models.generate_content(
+                    model=self._settings.gemini_model,
+                    contents=content,
+                    config=types.GenerateContentConfig(
+                        system_instruction=SYSTEM_PROMPT,
+                        max_output_tokens=1024,
+                    ),
                 )
-                text = next(
-                    (b.text for b in response.content if b.type == "text"), ""
-                )
+                text = response.text or ""
                 summary = self._parse_response(text, article)
                 log.debug(
                     "summarizer.success",
                     title=article.title,
-                    cache_read=response.usage.cache_read_input_tokens,
-                    cache_creation=response.usage.cache_creation_input_tokens,
+                    tokens=getattr(
+                        response.usage_metadata, "total_token_count", None
+                    ),
                 )
                 return summary
-            except (anthropic.RateLimitError, anthropic.APIStatusError) as e:
+            except Exception as e:
                 if attempt < retry:
-                    wait = 2 ** attempt
+                    wait = 2**attempt
                     log.warning(
                         "summarizer.retry",
                         title=article.title,
@@ -121,12 +116,10 @@ class Summarizer:
         return "\n".join(lines)
 
     def _parse_response(self, text: str, article: Article) -> Summary:
-        """Claude 응답 텍스트에서 JSON을 추출하여 Summary로 변환."""
-        # 코드 블록 안에 JSON이 있을 경우 추출
+        """Gemini 응답 텍스트에서 JSON을 추출하여 Summary로 변환."""
         match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
         json_str = match.group(1) if match else text.strip()
 
-        # 중괄호로 감싸인 부분만 추출 (여분의 텍스트 제거)
         brace_match = re.search(r"\{.*\}", json_str, re.DOTALL)
         if brace_match:
             json_str = brace_match.group(0)
