@@ -13,13 +13,11 @@ async function main(): Promise<void> {
   const countOverride = countIdx !== -1 ? parseInt(args[countIdx + 1], 10) : undefined;
 
   const settings = loadSettings();
-  if (countOverride !== undefined && !isNaN(countOverride)) {
-    settings.ARTICLE_COUNT = countOverride;
-  }
+  const count = countOverride !== undefined && !isNaN(countOverride) ? countOverride : undefined;
 
   if (runNow || dryRun) {
     log.info({ event: "index.run_now", dryRun });
-    await runPipeline(settings, { dryRun });
+    await runPipeline(settings, { dryRun, count });
     process.exit(0);
   }
 
