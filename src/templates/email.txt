@@ -11,7 +11,7 @@
 
 {{#each items}}
 [{{numberPlus1 @index}}/{{../count}}] {{article.title}}
-출처: {{article.source}} | 중요도: {{importance}} | 읽기 시간: {{readTimeMin}}분
+출처: {{article.source}} | Importance: {{importance}} | 읽기 시간: {{readTimeMin}}분
 
 💡 {{oneLiner}}
 

@@ -10,7 +10,7 @@ const settingsSchema = z.object({
   SEND_MINUTE: z.coerce.number().int().min(0).max(59).default(0),
   TIMEZONE: z.string().default("Asia/Seoul"),
   ARTICLE_COUNT: z.coerce.number().int().min(1).max(ARTICLE_COUNT_MAX).default(5),
-  ARTICLE_LANGUAGE: z.string().default("ko"),
+  ARTICLE_LANGUAGE: z.string().default("English"),
   GEMINI_API_KEY: z.string().min(1),
   GEMINI_MODEL: z.string().default("gemini-2.5-flash"),
   SMTP_HOST: z.string().default("smtp.gmail.com"),

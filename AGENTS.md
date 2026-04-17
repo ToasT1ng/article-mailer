@@ -65,6 +65,12 @@ Gemini가 분류하는 3가지 카테고리:
 - Gemini API 호출 테스트 시 `vi.spyOn(summarizer['client'], ...)`으로 교체
 - 테스트 공통 fixture는 `tests/conftest` 대신 각 테스트 파일 내 `beforeEach`/`vi.mock` 활용
 
+## 브랜치 전략
+
+- 새 작업 요청 시 현재 브랜치가 `main`이고 사용자가 `main`을 명시하지 않은 경우, 작업 전에 새 브랜치를 생성한다.
+- 브랜치명은 로컬에 `git-branch-convention` 스킬이 있으면 해당 스킬을 사용하여 결정한다. 스킬이 없으면 `feature/`, `fix/` 등 통용되는 prefix를 붙여 작업 내용을 간결하게 표현한다.
+- 브랜치 생성 후 작업을 시작하며, 완료 후 사용자에게 브랜치명을 알린다.
+
 ## 배포
 
 - Docker: `Dockerfile` + `docker-compose.yml`
