@@ -9,6 +9,11 @@ import { withRetry } from "./utils/retry.js";
 
 const log = logger.child({ module: "mailer" });
 
+Handlebars.registerHelper("numberPlus1", (index: number) => index + 1);
+Handlebars.registerHelper("categoryLabel", (category: string) =>
+  category === "impact" ? "실사용 사례" : "트렌드"
+);
+
 function loadTemplate(name: string): Handlebars.TemplateDelegate {
   const templatePath = path.join(__dirname, "templates", name);
   const src = fs.readFileSync(templatePath, "utf-8");
