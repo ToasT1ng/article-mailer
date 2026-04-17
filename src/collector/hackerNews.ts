@@ -1,4 +1,8 @@
+// @mozilla/readability의 타입 정의가 DOM Document를 참조하므로 파일 스코프로 추가
+/// <reference lib="dom" />
 import * as cheerio from "cheerio";
+import { Readability } from "@mozilla/readability";
+import { parseHTML } from "linkedom";
 import { AbstractCollector, Article } from "./base.js";
 import logger from "../logger.js";
 
@@ -24,6 +28,20 @@ export async function crawlArticleContent(url: string): Promise<string | undefin
     });
     if (!res.ok) return undefined;
     const html = await res.text();
+
+    // Readability로 본문 추출 시도
+    try {
+      const { document } = parseHTML(html);
+      const reader = new Readability(document as unknown as Document);
+      const article = reader.parse();
+      if (article?.textContent && article.textContent.trim().length > 200) {
+        return article.textContent.replace(/\s+/g, " ").trim().slice(0, 8000);
+      }
+    } catch {
+      // Readability 실패 시 cheerio fallback
+    }
+
+    // cheerio fallback
     const $ = cheerio.load(html);
     $("script, style, nav, footer, header, aside, .ad, .advertisement").remove();
     const text = $("article, main, .content, .post-body, .entry-content, body")
@@ -73,7 +91,8 @@ export class HackerNewsCollector extends AbstractCollector {
         publishedAt: new Date(item.time * 1000),
         fallbackDescription: item.text
           ? cheerio.load(item.text).text().slice(0, 300)
-          : item.title,
+          : `(HN score: ${item.score}) ${item.title}`,
+        score: item.score,
       });
     }
 

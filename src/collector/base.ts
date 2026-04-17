@@ -6,6 +6,7 @@ export interface Article {
   rawContent?: string;
   fallbackDescription: string;
   category?: "impact" | "trend_llm" | "trend_industry";
+  score?: number;
 }
 
 export abstract class AbstractCollector {
