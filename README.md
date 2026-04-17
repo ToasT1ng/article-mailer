@@ -25,15 +25,33 @@
 
 ## 설치 방법
 
+### npm (권장)
+
 ```bash
+npm install -g article-mailer
+```
+
+### npx (설치 없이 바로 실행)
+
+```bash
+npx article-mailer --run-now
+```
+
+### 소스코드에서 직접 빌드
+
+```bash
+git clone https://github.com/ToasT1ng/article-mailer.git
+cd article-mailer
 npm install
 npm run build
 ```
 
 ## 설정 방법
 
-1. `.env.example` 파일을 참고하여 `.env` 파일을 생성합니다.
+1. `.env` 파일을 생성하고 크리덴셜을 입력합니다.
    ```bash
+   # npm으로 설치한 경우 — 실행할 디렉토리에 .env 파일 생성
+   # 소스코드에서 빌드한 경우
    cp .env.example .env
    ```
 2. `.env` 파일에 실제 크리덴셜을 입력합니다.
@@ -59,24 +77,22 @@ npm run build
 ### 1. 스케줄러 모드
 설정한 시각에 맞춰 매일 자동으로 실행됩니다.
 ```bash
+article-mailer
+# 소스코드 빌드 시
 node dist/index.js
-# 또는 개발 모드
-npm run dev
 ```
 
 ### 2. 즉시 실행 (수동)
 스케줄과 상관없이 지금 바로 아티클을 수집하고 발송합니다.
 ```bash
-node dist/index.js --run-now
-```
-특정 개수의 아티클만 수집하고 싶다면 `--count` 옵션을 사용합니다.
-```bash
-node dist/index.js --run-now --count 3
+article-mailer --run-now
+# 특정 개수만 수집
+article-mailer --run-now --count 3
 ```
 
 ### 3. 드라이런 (발송 없이 수집만)
 ```bash
-node dist/index.js --dry-run
+article-mailer --dry-run
 ```
 
 ### 4. Docker 실행
