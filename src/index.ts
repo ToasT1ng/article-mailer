@@ -13,6 +13,11 @@ async function main(): Promise<void> {
   const countOverride = countIdx !== -1 ? parseInt(args[countIdx + 1], 10) : undefined;
 
   const settings = loadSettings();
+  if (countOverride !== undefined && (isNaN(countOverride) || countOverride < 1 || countOverride > 20)) {
+    log.error({ event: "index.invalid_count", value: args[countIdx + 1] });
+    process.stderr.write("--count 값은 1~20 사이의 정수여야 합니다.\n");
+    process.exit(1);
+  }
   const count = countOverride !== undefined && !isNaN(countOverride) ? countOverride : undefined;
 
   if (runNow || dryRun) {

@@ -27,8 +27,8 @@ export async function runPipeline(settings: Settings, options: { dryRun?: boolea
   const allArticles = [...hnArticles, ...rssArticles, ...arxivArticles];
 
   const deduped = deduplicateArticles(allArticles);
-  const unsentUrls = repo.filterUnsent(deduped.map((a) => a.url));
-  const unsent = deduped.filter((a) => unsentUrls.includes(a.url));
+  const unsentUrlSet = new Set(repo.filterUnsent(deduped.map((a) => a.url)));
+  const unsent = deduped.filter((a) => unsentUrlSet.has(a.url));
   const sorted = unsent.sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime());
 
   log.info({ event: "pipeline.collected", total: allArticles.length, unsent: unsent.length });
@@ -40,6 +40,7 @@ export async function runPipeline(settings: Settings, options: { dryRun?: boolea
 
   if (sorted.length === 0) {
     log.warn({ event: "pipeline.no_articles" });
+    repo.addLog({ runAt: new Date().toISOString(), articleCount: 0, recipientCount: 0, status: "failed", errorMessage: "수집된 아티클 없음" });
     return;
   }
 
@@ -58,17 +59,26 @@ export async function runPipeline(settings: Settings, options: { dryRun?: boolea
     return;
   }
 
-  await sendMail(summaries, settings);
-
-  repo.markSent(summaries.map((s) => ({ url: s.article.url, title: s.article.title, source: s.article.source })));
-  repo.addLog({
-    runAt: new Date().toISOString(),
-    articleCount: summaries.length,
-    recipientCount: getRecipients(settings).length,
-    status: "success",
-  });
-
-  log.info({ event: "pipeline.done", sent: summaries.length });
+  try {
+    await sendMail(summaries, settings);
+    repo.markSent(summaries.map((s) => ({ url: s.article.url, title: s.article.title, source: s.article.source })));
+    repo.addLog({
+      runAt: new Date().toISOString(),
+      articleCount: summaries.length,
+      recipientCount: getRecipients(settings).length,
+      status: "success",
+    });
+    log.info({ event: "pipeline.done", sent: summaries.length });
+  } catch (err) {
+    repo.addLog({
+      runAt: new Date().toISOString(),
+      articleCount: summaries.length,
+      recipientCount: 0,
+      status: "failed",
+      errorMessage: String(err),
+    });
+    throw err;
+  }
 }
 
 function deduplicateArticles(articles: Article[]): Article[] {

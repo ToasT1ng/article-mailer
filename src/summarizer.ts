@@ -56,11 +56,17 @@ ${articles.map((a, i) => `[${i}] ${a.title} (${a.source})`).join("\n")}
 JSON 배열로만 응답: [{"index": 0, "category": "impact"}, ...]`;
 
     const result = await withRetry(() => this.callGemini<ScreenResult[]>(prompt));
+    const seen = new Set<number>();
     const selected: Article[] = [];
     for (const r of result) {
-      const article = articles[r.index];
-      if (article) {
-        selected.push({ ...article, category: r.category });
+      if (r.index < 0 || r.index >= articles.length || seen.has(r.index)) continue;
+      seen.add(r.index);
+      selected.push({ ...articles[r.index], category: r.category });
+      if (selected.length >= total) break;
+    }
+    if (selected.length < total) {
+      for (let i = 0; i < articles.length && selected.length < total; i++) {
+        if (!seen.has(i)) selected.push(articles[i]);
       }
     }
     log.info({ event: "summarizer.screen", selected: selected.length });
@@ -76,7 +82,7 @@ ${articles
   .map(
     (a, i) => `[${i}] 제목: ${a.title}
 출처: ${a.source}
-내용: ${a.rawContent ?? a.fallbackDescription}`
+내용: ${(a.rawContent ?? a.fallbackDescription).slice(0, 3500)}`
   )
   .join("\n\n")}
 
