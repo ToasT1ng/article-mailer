@@ -90,7 +90,7 @@ ${articles
   )
   .join("\n\n")}
 
-JSON 배열로만 응답 (category는 반드시 "trend_industry", "trend_llm", "impact" 중 하나):
+JSON 배열로만 응답 (category는 "trend_industry", "trend_llm", "impact" 중 하나 / importance는 "상", "중", "하" 중 하나):
 [{
   "index": 0,
   "category": "trend_industry",
