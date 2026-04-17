@@ -55,7 +55,7 @@ Category selection criteria (in priority order):
 If fewer than ${industryCount} trend_industry articles are available, substitute with trend_llm.
 
 Candidate list:
-${articles.map((a, i) => `[${i}] ${a.title} (${a.source})`).join("\n")}
+${articles.map((a, i) => `[${i}] ${a.title} (${a.source})\n    ${a.fallbackDescription.slice(0, 150)}`).join("\n")}
 
 Respond with a JSON array only: [{"index": 0, "category": "trend_industry"}, ...]`;
 
