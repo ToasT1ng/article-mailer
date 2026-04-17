@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Literal
 
 
 @dataclass
@@ -11,6 +12,7 @@ class Article:
     published_at: datetime
     raw_content: str | None = None
     fallback_description: str = ""
+    category: Literal["impact", "trend"] | None = None
 
     def content_for_summary(self) -> str:
         """요약에 사용할 텍스트를 반환한다. 본문 크롤링 성공 시 본문, 아니면 RSS description."""

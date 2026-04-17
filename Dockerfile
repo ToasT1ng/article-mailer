@@ -15,9 +15,10 @@ COPY src/ ./src/
 COPY templates/ ./templates/
 COPY alembic/ ./alembic/
 COPY alembic.ini .
+COPY tests/ ./tests/
 
 # 의존성 설치
-RUN pip install --no-cache-dir .
+RUN pip install --no-cache-dir ".[dev]"
 
 # data 디렉토리 생성
 RUN mkdir -p /app/data

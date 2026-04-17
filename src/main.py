@@ -36,11 +36,11 @@ logging.basicConfig(level=logging.WARNING)
 log = structlog.get_logger()
 
 
-def run_pipeline(count: int | None = None) -> None:
+def run_pipeline(count: int | None = None, dry_run: bool = False) -> None:
     """동기 래퍼 — APScheduler 및 CLI에서 공통 사용."""
     settings = get_settings()
     pipeline = Pipeline(settings)
-    asyncio.run(pipeline.run(count=count))
+    asyncio.run(pipeline.run(count=count, dry_run=dry_run))
 
 
 def main() -> None:
@@ -56,11 +56,16 @@ def main() -> None:
         default=None,
         help="수집할 아티클 수 (기본값: settings.article_count)",
     )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="수집+크롤링만 실행. Gemini 요약·이메일 발송 스킵",
+    )
     args = parser.parse_args()
 
     if args.run_now:
-        log.info("main.run_now", count=args.count)
-        run_pipeline(count=args.count)
+        log.info("main.run_now", count=args.count, dry_run=args.dry_run)
+        run_pipeline(count=args.count, dry_run=args.dry_run)
         return
 
     # ─── 스케줄러 모드 ─────────────────────────────────────────────────────

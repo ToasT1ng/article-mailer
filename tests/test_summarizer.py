@@ -1,63 +1,86 @@
 """Summarizer 테스트."""
 import json
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from src.collector.base import Article
-from src.summarizer import Summarizer
+from src.summarizer import Summarizer, compute_category_counts
 
 
-class TestSummarizerParseResponse:
-    """_parse_response 단위 테스트."""
+class TestComputeCategoryCounts:
+    def test_five_articles(self):
+        assert compute_category_counts(5) == (1, 4)
 
-    def test_parses_clean_json(self, sample_article, test_settings):
+    def test_ten_articles(self):
+        assert compute_category_counts(10) == (2, 8)
+
+    def test_one_article(self):
+        assert compute_category_counts(1) == (1, 0)
+
+    def test_three_articles(self):
+        assert compute_category_counts(3) == (1, 2)
+
+
+class TestParseJsonArray:
+    def test_clean_array(self, test_settings):
         summarizer = Summarizer(test_settings)
-        raw = json.dumps(
+        raw = json.dumps([{"index": 0, "category": "impact"}, {"index": 1, "category": "trend"}])
+        result = summarizer._parse_json_array(raw)
+        assert len(result) == 2
+        assert result[0]["index"] == 0
+
+    def test_array_in_code_block(self, test_settings):
+        summarizer = Summarizer(test_settings)
+        raw = '```json\n[{"index": 0, "category": "trend"}]\n```'
+        result = summarizer._parse_json_array(raw)
+        assert len(result) == 1
+
+
+class TestBuildSummaries:
+    def test_builds_from_valid_data(self, test_settings, sample_article):
+        summarizer = Summarizer(test_settings)
+        articles = [sample_article]
+        data = [
             {
-                "one_liner": "GPT-5 출시로 AI 업계 지각변동",
-                "body": "OpenAI가 GPT-5를 공개했다. 성능이 크게 향상됐다.",
+                "index": 0,
+                "category": "impact",
+                "one_liner": "GPT-5 출시",
+                "body": "본문 요약",
                 "importance": "상",
                 "read_time_min": 4,
             }
-        )
-        summary = summarizer._parse_response(raw, sample_article)
+        ]
+        summaries = summarizer._build_summaries(data, articles, n=1)
+        assert len(summaries) == 1
+        assert summaries[0].importance == "상"
+        assert summaries[0].article.category == "impact"
 
-        assert summary.one_liner == "GPT-5 출시로 AI 업계 지각변동"
-        assert summary.importance == "상"
-        assert summary.read_time_min == 4
-
-    def test_parses_json_in_code_block(self, sample_article, test_settings):
+    def test_skips_invalid_index(self, test_settings, sample_article):
         summarizer = Summarizer(test_settings)
-        raw = '```json\n{"one_liner": "요약", "body": "본문", "importance": "중", "read_time_min": 3}\n```'
-        summary = summarizer._parse_response(raw, sample_article)
-        assert summary.importance == "중"
+        data = [{"index": 99, "category": "trend", "one_liner": "x", "body": "y"}]
+        summaries = summarizer._build_summaries(data, [sample_article], n=1)
+        assert len(summaries) == 0
 
-    def test_defaults_invalid_importance(self, sample_article, test_settings):
-        summarizer = Summarizer(test_settings)
-        raw = json.dumps(
-            {
-                "one_liner": "요약",
-                "body": "본문",
-                "importance": "unknown",
-                "read_time_min": 3,
-            }
-        )
-        summary = summarizer._parse_response(raw, sample_article)
-        assert summary.importance == "중"
+    def test_limits_to_n(self, test_settings):
+        from datetime import datetime, timezone
 
-    def test_truncates_one_liner(self, sample_article, test_settings):
         summarizer = Summarizer(test_settings)
-        raw = json.dumps(
-            {
-                "one_liner": "A" * 100,
-                "body": "본문",
-                "importance": "하",
-                "read_time_min": 2,
-            }
-        )
-        summary = summarizer._parse_response(raw, sample_article)
-        assert len(summary.one_liner) <= 50
+        articles = [
+            Article(
+                title=f"Article {i}",
+                url=f"https://example.com/{i}",
+                source="Test",
+                published_at=datetime.now(timezone.utc),
+            )
+            for i in range(5)
+        ]
+        data = [
+            {"index": i, "category": "trend", "one_liner": "x", "body": "y"}
+            for i in range(5)
+        ]
+        summaries = summarizer._build_summaries(data, articles, n=2)
+        assert len(summaries) == 2
 
 
 def _make_gemini_response(text: str) -> MagicMock:
@@ -67,10 +90,23 @@ def _make_gemini_response(text: str) -> MagicMock:
     return response
 
 
-class TestSummarizerSummarizeAll:
+class TestScreeningPoolSize:
+    def test_one_article(self, test_settings):
+        s = Summarizer(test_settings)
+        assert s._screening_pool_size(1) == 4
+
+    def test_five_articles(self, test_settings):
+        s = Summarizer(test_settings)
+        assert s._screening_pool_size(5) == 20
+
+    def test_capped_at_max(self, test_settings):
+        s = Summarizer(test_settings)
+        assert s._screening_pool_size(10) == 20
+
+
+class TestScreen:
     @pytest.mark.asyncio
-    async def test_summarize_all_parallel(self, test_settings):
-        """여러 아티클을 병렬 요약."""
+    async def test_screen_skips_when_small_pool(self, test_settings):
         from datetime import datetime, timezone
 
         articles = [
@@ -79,81 +115,90 @@ class TestSummarizerSummarizeAll:
                 url=f"https://example.com/{i}",
                 source="Test",
                 published_at=datetime.now(timezone.utc),
-                fallback_description=f"Description {i}",
             )
-            for i in range(3)
+            for i in range(5)
         ]
-
-        response_text = json.dumps(
-            {
-                "one_liner": "요약",
-                "body": "본문",
-                "importance": "중",
-                "read_time_min": 3,
-            }
-        )
-        mock_response = _make_gemini_response(response_text)
-        mock_generate = AsyncMock(return_value=mock_response)
-
         summarizer = Summarizer(test_settings)
-        summarizer._client = MagicMock()
-        summarizer._client.aio.models.generate_content = mock_generate
-
-        summaries = await summarizer.summarize_all(articles)
-
-        assert len(summaries) == 3
-        assert mock_generate.call_count == 3
+        result = await summarizer.screen(articles, n=5)
+        assert result == articles
 
     @pytest.mark.asyncio
-    async def test_summarize_all_skips_failed(self, test_settings):
-        """요약 실패한 아티클은 결과에서 제외."""
+    async def test_screen_calls_gemini(self, test_settings):
         from datetime import datetime, timezone
 
         articles = [
             Article(
-                title="Good Article",
-                url="https://example.com/good",
+                title=f"Article {i}",
+                url=f"https://example.com/{i}",
                 source="Test",
                 published_at=datetime.now(timezone.utc),
-                fallback_description="Good",
-            ),
-            Article(
-                title="Bad Article",
-                url="https://example.com/bad",
-                source="Test",
-                published_at=datetime.now(timezone.utc),
-                fallback_description="Bad",
-            ),
+                fallback_description=f"Desc {i}",
+            )
+            for i in range(25)
         ]
 
-        good_response = _make_gemini_response(
-            json.dumps(
-                {
-                    "one_liner": "요약",
-                    "body": "본문",
-                    "importance": "중",
-                    "read_time_min": 3,
-                }
-            )
-        )
-
-        async def side_effect(*args, **kwargs):
-            contents = kwargs.get("contents", args[1] if len(args) > 1 else "")
-            if "https://example.com/bad" in contents:
-                raise Exception("Server error")
-            return good_response
+        response_data = [{"index": i, "category": "trend"} for i in range(20)]
+        mock_response = _make_gemini_response(json.dumps(response_data))
 
         summarizer = Summarizer(test_settings)
         summarizer._client = MagicMock()
-        summarizer._client.aio.models.generate_content = AsyncMock(side_effect=side_effect)
+        summarizer._client.aio.models.generate_content = AsyncMock(
+            return_value=mock_response
+        )
 
-        summaries = await summarizer.summarize_all(articles)
-        assert len(summaries) == 1
-        assert summaries[0].article.title == "Good Article"
+        result = await summarizer.screen(articles, n=5)
+        assert len(result) == 20
+
+
+class TestSelectAndSummarize:
+    @pytest.mark.asyncio
+    async def test_returns_summaries(self, test_settings):
+        from datetime import datetime, timezone
+
+        articles = [
+            Article(
+                title=f"Article {i}",
+                url=f"https://example.com/{i}",
+                source="Test",
+                published_at=datetime.now(timezone.utc),
+                fallback_description=f"Desc {i}",
+            )
+            for i in range(5)
+        ]
+
+        response_data = [
+            {
+                "index": 0,
+                "category": "impact",
+                "one_liner": "임팩트 요약",
+                "body": "본문",
+                "importance": "상",
+                "read_time_min": 3,
+            },
+            {
+                "index": 1,
+                "category": "trend",
+                "one_liner": "트렌드 요약",
+                "body": "본문",
+                "importance": "중",
+                "read_time_min": 2,
+            },
+        ]
+        mock_response = _make_gemini_response(json.dumps(response_data))
+
+        summarizer = Summarizer(test_settings)
+        summarizer._client = MagicMock()
+        summarizer._client.aio.models.generate_content = AsyncMock(
+            return_value=mock_response
+        )
+
+        summaries = await summarizer.select_and_summarize(articles, n=2)
+        assert len(summaries) == 2
+        assert summaries[0].article.category == "impact"
+        assert summaries[1].article.category == "trend"
 
     @pytest.mark.asyncio
-    async def test_summarize_all_empty(self, test_settings):
-        """빈 목록 입력 시 빈 목록 반환."""
+    async def test_empty_articles(self, test_settings):
         summarizer = Summarizer(test_settings)
-        summaries = await summarizer.summarize_all([])
-        assert summaries == []
+        result = await summarizer.select_and_summarize([], n=5)
+        assert result == []
