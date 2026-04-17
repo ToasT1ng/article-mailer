@@ -1,6 +1,6 @@
 {
   "name": "article-mailer",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "매일 AI 아티클을 수집·요약하여 이메일로 발송하는 자동화 도구",
   "main": "dist/index.js",
   "bin": {
@@ -11,7 +11,7 @@
     "bin"
   ],
   "scripts": {
-    "build": "tsc && cp -r src/templates dist/templates",
+    "build": "tsc && rm -rf dist/templates && cp -r src/templates dist/templates",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
     "test": "vitest run",
@@ -29,6 +29,14 @@
     "rss"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ToasT1ng/article-mailer.git"
+  },
+  "homepage": "https://github.com/ToasT1ng/article-mailer#readme",
+  "bugs": {
+    "url": "https://github.com/ToasT1ng/article-mailer/issues"
+  },
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
     "cheerio": "^1.0.0",

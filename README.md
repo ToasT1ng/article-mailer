@@ -1,5 +1,8 @@
 # article-mailer
 
+[![npm version](https://img.shields.io/npm/v/article-mailer.svg)](https://www.npmjs.com/package/article-mailer)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 매일 최신 AI 아티클을 수집하고 요약하여 이메일로 발송하는 자동화 도구입니다.
 
 ## 동작 방식
@@ -102,3 +105,7 @@ src/
 └── utils/
     └── retry.ts      # 지수 백오프 재시도 유틸
 ```
+
+## License
+
+MIT © [ToasT1ng](https://github.com/ToasT1ng)
