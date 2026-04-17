@@ -71,7 +71,7 @@ Gemini가 분류하는 3가지 카테고리:
 - 브랜치명은 로컬에 `git-branch-convention` 스킬이 있으면 해당 스킬을 사용하여 결정한다. 스킬이 없으면 `feature/`, `fix/` 등 통용되는 prefix를 붙여 작업 내용을 간결하게 표현한다.
 - 브랜치 생성 후 작업을 시작하며, 완료 후 사용자에게 브랜치명을 알린다.
 
-
+## 배포
 
 - Docker: `Dockerfile` + `docker-compose.yml`
 - 모든 설정은 `.env` 파일로 주입 (`.env.example` 참조)
