@@ -5,7 +5,7 @@ export interface Article {
   publishedAt: Date;
   rawContent?: string;
   fallbackDescription: string;
-  category?: "impact" | "trend";
+  category?: "impact" | "trend_llm" | "trend_industry";
 }
 
 export abstract class AbstractCollector {
