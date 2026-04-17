@@ -20,71 +20,67 @@
 | F-5 | 이미 발송된 아티클 중복 제외 | Must |
 | F-6 | 본문 크롤링 실패 시 graceful fallback | Must |
 | F-7 | 여러 수신자에게 동시 발송 | Should |
-| F-8 | 수동 실행 지원 (즉시 발송 CLI 명령) | Should |
+| F-8 | 수동 실행 지원 (`--run-now` CLI 플래그) | Should |
+| F-9 | `npx article-mailer` 로 설치 없이 실행 가능 | Must |
 
 ### 비기능 요구사항
 
 - 단일 서버(또는 로컬 머신)에서 Docker로 실행 가능
+- `npx article-mailer` 또는 `npm install -g article-mailer` 로도 실행 가능
 - 하루 1회 실행 기준 Gemini API 비용 최소화
-- 환경변수만으로 모든 설정 변경 가능 (코드 수정 불필요)
+- 환경변수(.env)만으로 모든 설정 변경 가능 (코드 수정 불필요)
+- 네이티브 모듈 없음 — `npx` 환경에서 빌드 도구 불필요
 
 ---
 
-## 3. 기술 스택 결정
+## 3. 기술 스택
 
 ### 언어 및 런타임
 
-**Python 3.12**
-- 이유: `asyncio` 네이티브 지원, RSS/HTTP/이메일 생태계 성숙도, Gemini SDK 공식 지원
+**TypeScript + Node.js 20+**
+- npm 생태계를 통한 `npx` 배포 가능
+- `fetch` API 내장 (Node 18+), 별도 HTTP 클라이언트 불필요
+- 비동기 처리: `Promise.allSettled`, `async/await`
 
 ### 의존성 목록
 
-| 라이브러리 | 버전 | 용도 | 선택 이유 |
-|---|---|---|---|
-| `google-genai` | latest | Gemini API 클라이언트 | 공식 SDK, 무료 티어 지원 |
-| `pydantic-settings` | ^2 | 설정 관리 (.env 파싱) | 타입 안전한 환경변수 바인딩, 검증 내장 |
-| `feedparser` | ^6 | RSS/Atom 피드 파싱 | 사실상 표준, 인코딩/날짜 처리 자동 |
-| `httpx` | ^0.27 | 비동기 HTTP 클라이언트 | async/await 네이티브, timeout/retry 설정 용이 |
-| `beautifulsoup4` | ^4 | HTML 본문 추출 | 파싱 안정성 높음 |
-| `lxml` | ^5 | BS4 파서 백엔드 | feedparser/BS4 공통 사용, 속도 빠름 |
-| `jinja2` | ^3 | 이메일 HTML 템플릿 | 로직과 뷰 분리 |
-| `APScheduler` | ^3 | 인프로세스 스케줄러 | cron 표현식 지원, 프로세스 재시작 없이 스케줄 변경 가능 |
-| `SQLAlchemy` | ^2 | ORM (SQLite) | 중복 발송 방지용 발송 이력 관리 |
-| `alembic` | ^1 | DB 마이그레이션 | 스키마 변경 이력 관리 |
-| `structlog` | ^24 | 구조화 로깅 | JSON 로그 출력, 프로덕션 로그 파싱 용이 |
-| `pytest` | ^8 | 테스트 | - |
-| `pytest-asyncio` | ^0 | 비동기 테스트 | - |
-| `pytest-httpx` | ^0 | httpx mock | 외부 HTTP 요청 mocking |
-| `ruff` | ^0 | 린터 + 포매터 | flake8+black 대체, 빠름 |
-
-### 스케줄러 선택: APScheduler vs 시스템 Cron
-
-| 항목 | APScheduler | 시스템 Cron |
+| 라이브러리 | 버전 | 용도 |
 |---|---|---|
-| 설정 변경 | 코드/환경변수로 핫리로드 가능 | crontab 직접 수정 필요 |
-| 실행 이력 | 인메모리 or DB 저장 | 별도 로그 필요 |
-| 컨테이너 친화성 | 단일 프로세스로 완결 | 별도 cron 데몬 필요 |
-| 복잡도 | 코드로 관리 | 운영 환경 의존 |
+| `@google/generative-ai` | ^0.21 | Gemini API 클라이언트 |
+| `zod` | ^3.23 | 환경변수 스키마 검증 |
+| `dotenv` | ^16.4 | .env 파일 로드 |
+| `rss-parser` | ^3.13 | RSS/Atom 피드 파싱 |
+| `cheerio` | ^1.0 | HTML 본문 추출 |
+| `nodemailer` | ^6.9 | SMTP 이메일 발송 |
+| `node-cron` | ^3.0 | 인프로세스 cron 스케줄러 |
+| `handlebars` | ^4.7 | 이메일 HTML/TXT 템플릿 |
+| `pino` | ^9.1 | 구조화 로깅 (JSON) |
+| `pino-pretty` | ^11.0 | 로컬 개발용 pretty 출력 |
 
-**결론: APScheduler 채택** — Docker 단일 컨테이너에서 스케줄까지 자급자족 가능.
+### 개발 의존성
 
-### 이메일 발송: SMTP vs AWS SES
+| 라이브러리 | 용도 |
+|---|---|
+| `typescript` | 컴파일러 |
+| `tsx` | 개발 중 직접 실행 (`ts-node` 대체) |
+| `@types/node` | Node.js 타입 |
+| `@types/nodemailer` | nodemailer 타입 |
 
-| 항목 | Gmail SMTP | AWS SES |
-|---|---|---|
-| 초기 설정 | Gmail App Password만 발급하면 됨 | AWS 계정 + 도메인 인증 필요 |
-| 발송 한도 | 500건/일 (무료) | 거의 무제한 (유료) |
-| 개발 편의성 | 높음 | 낮음 |
-| 프로덕션 적합성 | 수신자 수 적으면 충분 | 대규모 발송에 적합 |
+### 네이티브 모듈 없음
 
-**결론: Gmail SMTP 기본 채택**, 환경변수로 SMTP 호스트를 교체하면 SES로 전환 가능하게 설계.
+SQLite 대신 **JSON 파일**로 발송 이력 관리.
+하루 5~10건 규모에서 성능 이슈 없으며, `npx` 환경에서 별도 빌드 도구 불필요.
 
-### Gemini API 사용 전략
+### npm 배포 구조
 
-- 모델: `gemini-2.5-flash` (무료 티어: 1,500 req/일)
-- 호출 방식: 아티클별 개별 호출 (병렬 `asyncio.gather`)
-- JSON 응답 모드 사용 (`response_mime_type="application/json"`)
-- 예상 비용: 무료 티어 내 충분 (하루 5~10건 기준)
+```
+bin/article-mailer.js     ← shebang 래퍼 (npm bin 진입점)
+dist/                     ← tsc 컴파일 결과
+src/templates/            ← Handlebars 템플릿 (빌드 시 dist/templates/ 복사)
+```
+
+`package.json`의 `bin` 필드가 `bin/article-mailer.js`를 가리키며,
+npm이 설치 시 자동으로 실행 권한(chmod +x)을 부여한다.
 
 ---
 
@@ -96,26 +92,27 @@
 │                                                              │
 │  ┌───────────┐   trigger   ┌──────────────────────────────┐  │
 │  │ Scheduler │────────────▶│        Pipeline              │  │
-│  │(APScheduler)            │                              │  │
+│  │(node-cron)│             │                              │  │
 │  └───────────┘             │  ┌──────────┐               │  │
-│                            │  │Collector │ feedparser     │  │
-│  ┌───────────┐             │  │          │ + httpx        │  │
+│                            │  │Collector │ rss-parser     │  │
+│  ┌───────────┐             │  │          │ + fetch        │  │
 │  │  CLI      │────────────▶│  └────┬─────┘               │  │
-│  │(수동 실행) │  trigger    │       │ articles[]          │  │
+│  │(--run-now)│  trigger    │       │ articles[]          │  │
 │  └───────────┘             │  ┌────▼─────┐               │  │
 │                            │  │Summarizer│ Gemini API    │  │
 │                            │  │          │ (async batch)  │  │
 │                            │  └────┬─────┘               │  │
 │                            │       │ summaries[]         │  │
 │                            │  ┌────▼─────┐               │  │
-│                            │  │  Mailer  │ SMTP + Jinja2  │  │
+│                            │  │  Mailer  │ nodemailer    │  │
+│                            │  │          │ + Handlebars  │  │
 │                            │  └──────────┘               │  │
 │                            └──────────────────────────────┘  │
 │                                          │                   │
 │  ┌──────────────┐              ┌──────────▼──────────┐       │
-│  │   Settings   │              │    SQLite DB        │       │
-│  │(pydantic-    │              │  (sent_articles)    │       │
-│  │  settings)   │              └─────────────────────┘       │
+│  │   Settings   │              │    JSON 파일        │       │
+│  │  (zod +      │              │  (sent_articles)    │       │
+│  │   dotenv)    │              └─────────────────────┘       │
 │  └──────────────┘                                            │
 └──────────────────────────────────────────────────────────────┘
 ```
@@ -125,202 +122,184 @@
 ## 5. 데이터 흐름 상세
 
 ```
-[1] Scheduler / CLI
+[1] Scheduler(node-cron) / CLI(--run-now)
       │
       ▼
-[2] Collector.collect(n: int) → List[Article]
-      ├── 등록된 소스(RSS/API) 병렬 fetch
-      ├── 전체 후보 목록 최신순 정렬
-      ├── DB에서 이미 발송된 URL 제외
-      └── 상위 n개 반환
+[2] Collector.fetch() → Article[]
+      ├── HackerNewsCollector: REST API + AI 키워드 필터
+      ├── RSSCollector: rss-parser로 복수 피드 수집
+      ├── 전체 후보 최신순 정렬 + URL 중복 제거
+      └── JSON 파일에서 이미 발송된 URL 제외
 
       Article {
-        title: str
-        url: str
-        source: str
-        published_at: datetime
-        raw_content: str | None   # 크롤링 성공 시
-        fallback_description: str # 크롤링 실패 시 RSS description 사용
+        title: string
+        url: string
+        source: string
+        publishedAt: Date
+        rawContent?: string        // 크롤링 성공 시
+        fallbackDescription: string // 크롤링 실패 시 RSS description
+        category?: 'impact' | 'trend'
       }
 
-[3] Summarizer.summarize_all(articles) → List[Summary]  [asyncio.gather]
-      ├── 각 Article에 대해 Gemini API 호출 (병렬)
-      ├── JSON 응답 모드로 구조화된 출력
-      └── 응답 파싱 → Summary
+[3] Summarizer.screen(articles, n) → Article[]   // Gemini 1회차: 후보 선별
+[4] crawlContents(screened) → Article[]           // cheerio로 본문 크롤링 (병렬)
+[5] Summarizer.selectAndSummarize(crawled, n) → Summary[]  // Gemini 2회차: 요약
 
       Summary {
         article: Article
-        one_liner: str      # 한 줄 요약 (50자 이내)
-        body: str           # 3~5문장 요약
-        importance: Literal["상", "중", "하"]
-        read_time_min: int  # 추정 읽기 시간
+        oneLiner: string           // 한 줄 요약 (50자 이내)
+        body: string               // 3~5문장 요약
+        importance: '상' | '중' | '하'
+        readTimeMin: number
       }
 
-[4] Mailer.send(summaries: List[Summary])
-      ├── Jinja2로 HTML 렌더링
-      ├── MIME multipart (text/plain fallback 포함)
-      ├── SMTP 발송
-      └── DB에 발송된 URL 기록 (중복 방지)
+[6] Mailer.send(summaries)
+      ├── Handlebars로 HTML/TXT 렌더링
+      ├── nodemailer로 SMTP 발송
+      └── JSON 파일에 발송 URL 기록
 ```
 
 ---
 
 ## 6. 아티클 수집 소스
 
-우선순위 순으로 여러 소스를 등록하고, 부족하면 다음 소스로 보충.
-
 | 우선순위 | 소스 | 방식 | 카테고리 |
 |---|---|---|---|
-| 1 | Hacker News (Top Stories) | REST API | AI/ML 트렌딩, 커뮤니티 검증 |
+| 1 | Hacker News (Top Stories) | REST API | AI/ML 트렌딩 |
 | 2 | ArXiv cs.AI | RSS | 최신 AI 논문 |
 | 3 | The Batch (deeplearning.ai) | RSS | AI 뉴스레터 |
 | 4 | MIT Technology Review – AI | RSS | AI 업계 분석 |
 | 5 | VentureBeat AI | RSS | AI 스타트업/비즈니스 |
 
 **Hacker News 필터링 기준**
-- 점수(score) ≥ 100
-- 제목에 `AI`, `LLM`, `GPT`, `ML`, `model`, `neural` 등 키워드 포함
+- score ≥ 100
+- 제목에 AI/LLM/GPT/ML/neural 등 키워드 포함
 - 24시간 이내 게시
 
 ---
 
-## 7. 설정 (pydantic-settings)
+## 7. 설정 (zod + dotenv)
 
-모든 동작은 환경변수로 제어한다. 코드 수정 없이 `.env` 파일만 바꾸면 된다.
+모든 동작은 환경변수로 제어한다.
 
-```python
-class Settings(BaseSettings):
-    # 스케줄
-    send_hour: int = 8          # 발송 시각 (0~23)
-    send_minute: int = 0        # 발송 분 (0~59)
-    timezone: str = "Asia/Seoul"
-
-    # 아티클
-    article_count: int = 5      # 수집할 아티클 수 (1~20)
-    article_language: str = "ko"  # 요약 언어
-
-    # Gemini API
-    gemini_api_key: str
-    gemini_model: str = "gemini-2.5-flash"
-
-    # SMTP
-    smtp_host: str = "smtp.gmail.com"
-    smtp_port: int = 587
-    smtp_user: str
-    smtp_password: str
-
-    # 수신자 (콤마 구분)
-    recipient_emails: list[str]
-
-    # DB
-    database_url: str = "sqlite:///./data/article_mailer.db"
-
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+```typescript
+const settingsSchema = z.object({
+  SEND_HOUR:         z.coerce.number().int().min(0).max(23).default(8),
+  SEND_MINUTE:       z.coerce.number().int().min(0).max(59).default(0),
+  TIMEZONE:          z.string().default('Asia/Seoul'),
+  ARTICLE_COUNT:     z.coerce.number().int().min(1).max(20).default(5),
+  ARTICLE_LANGUAGE:  z.string().default('ko'),
+  GEMINI_API_KEY:    z.string().min(1),
+  GEMINI_MODEL:      z.string().default('gemini-2.5-flash'),
+  SMTP_HOST:         z.string().default('smtp.gmail.com'),
+  SMTP_PORT:         z.coerce.number().int().default(587),
+  SMTP_USER:         z.string().min(1),
+  SMTP_PASSWORD:     z.string().min(1),
+  RECIPIENT_EMAILS:  z.string().min(1),   // 콤마 구분
+  DATA_PATH:         z.string().default('./data/article_mailer.json'),
+});
 ```
 
 **.env.example**
 
 ```env
-# 스케줄 설정
 SEND_HOUR=8
 SEND_MINUTE=0
 TIMEZONE=Asia/Seoul
 
-# 아티클 설정
-ARTICLE_COUNT=5          # 원하는 숫자로 변경 (1~20)
+ARTICLE_COUNT=5
 ARTICLE_LANGUAGE=ko
 
-# Gemini API
 GEMINI_API_KEY=your-gemini-api-key
 GEMINI_MODEL=gemini-2.5-flash
 
-# SMTP (Gmail 기준)
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=your@gmail.com
 SMTP_PASSWORD=gmail-app-password
 
-# 수신자 (콤마로 여러 명 지정 가능)
 RECIPIENT_EMAILS=a@example.com,b@example.com
+
+DATA_PATH=./data/article_mailer.json
 ```
 
 ---
 
-## 8. DB 스키마
+## 8. 스토리지 (JSON 파일)
 
-```sql
--- 발송 이력 (중복 방지)
-CREATE TABLE sent_articles (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    url         TEXT NOT NULL UNIQUE,
-    title       TEXT NOT NULL,
-    source      TEXT NOT NULL,
-    sent_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
+SQLite 대신 JSON 파일 사용. 하루 수십 건 규모에서 성능 문제 없음.
 
--- 발송 로그 (성공/실패 추적)
-CREATE TABLE send_logs (
-    id              INTEGER PRIMARY KEY AUTOINCREMENT,
-    run_at          DATETIME NOT NULL,
-    article_count   INTEGER NOT NULL,
-    recipient_count INTEGER NOT NULL,
-    status          TEXT NOT NULL,   -- 'success' | 'partial' | 'failed'
-    error_message   TEXT,
-    created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
+```typescript
+interface StoreData {
+  sentArticles: Array<{
+    url: string;
+    title: string;
+    source: string;
+    sentAt: string;   // ISO 8601
+  }>;
+  sendLogs: Array<{
+    runAt: string;
+    articleCount: number;
+    recipientCount: number;
+    status: 'success' | 'partial' | 'failed';
+    errorMessage?: string;
+    createdAt: string;
+  }>;
+}
 ```
 
 ---
 
 ## 9. Gemini API 프롬프트 설계
 
-```python
-SYSTEM_PROMPT = """
-당신은 AI/ML 전문 뉴스 편집자입니다.
-주어진 아티클을 한국어로 요약하고 아래 JSON 형식으로만 응답하세요.
+### 1단계: 후보 선별 (screening)
 
-{
-  "one_liner": "한 줄 요약 (50자 이내)",
-  "body": "핵심 내용을 3~5문장으로 요약",
-  "importance": "상 | 중 | 하",
-  "read_time_min": 예상_읽기_시간_정수
-}
-
-요약 원칙:
-- 독자는 AI 업계 종사자. 기술 용어를 쉽게 설명하지 않아도 됨
-- 중요도 기준: 상=업계 패러다임 변화, 중=주목할 기술/비즈니스, 하=참고 수준
-- 본문이 없으면 제목과 설명만으로 추론하여 요약
-""" # JSON 응답 모드로 전달
 ```
+당신은 AI/ML 전문 뉴스 편집장입니다.
+아래 아티클 후보 목록에서 정확히 {total}개를 선별하세요.
+
+카테고리별 선별 기준:
+- impact ({impact_count}개): AI가 세상을 실질적으로 변화시키는 사례
+- trend ({trend_count}개): AI 기술 동향, 모델 출시, 업계 소식
+
+JSON 배열로만 응답: [{"index": 0, "category": "impact"}, ...]
+```
+
+### 2단계: 최종 선택 + 요약
+
+```
+당신은 AI/ML 전문 뉴스 편집자입니다.
+아래 {total}개 아티클에서 최종 {final_count}개를 선택하여 요약하세요.
+
+JSON 배열로만 응답:
+[{
+  "index": 0,
+  "category": "impact",
+  "one_liner": "한 줄 요약 (50자 이내)",
+  "body": "3~5문장 요약",
+  "importance": "상 | 중 | 하",
+  "read_time_min": 3
+}]
+```
+
+- 응답 모드: `responseMimeType: "application/json"`
+- 재시도: 최대 2회 (exponential backoff)
 
 ---
 
-## 10. 이메일 템플릿 구조
+## 10. 이메일 템플릿 (Handlebars)
 
 ```
-제목: [AI 데일리] 2026-04-14 | 오늘의 AI 아티클 {N}선
+제목: [AI 데일리] {{formattedDate}} | 오늘의 AI 아티클 {{count}}선
 
-본문 (HTML):
-┌─────────────────────────────────────────┐
-│  AI 데일리 브리핑                        │
-│  2026년 04월 14일 (월)                   │
-├─────────────────────────────────────────┤
-│                                         │
-│  1. [중요도: 상] 아티클 제목             │
-│     출처: Hacker News | 읽기: 5분        │
-│     한 줄 요약                           │
-│     ─────────────────────────────────   │
-│     본문 요약 (3~5문장)                  │
-│                                         │
-│     [원문 읽기 →]                        │
-│                                         │
-│  2. ...                                 │
-│                                         │
-├─────────────────────────────────────────┤
-│  이 메일은 자동 발송됩니다.              │
-└─────────────────────────────────────────┘
+본문 (HTML — src/templates/email.html):
+  {{#each items}}
+    중요도 배지, 출처, 읽기 시간
+    제목
+    한 줄 요약
+    본문 요약
+    [원문 읽기 →] 링크
+  {{/each}}
 ```
 
 ---
@@ -329,12 +308,11 @@ SYSTEM_PROMPT = """
 
 | 상황 | 처리 |
 |---|---|
-| 특정 소스 RSS fetch 실패 | 해당 소스 스킵, 다음 소스로 보충 |
-| 아티클 본문 크롤링 실패 | RSS `description` 필드로 fallback |
-| Gemini API 타임아웃 | 최대 2회 재시도, 실패 시 해당 아티클 제외 |
-| 수집 아티클이 N개 미만 | 가용한 아티클만으로 발송 (최소 1개 이상이면 발송) |
-| SMTP 발송 실패 | 최대 3회 재시도 후 실패 로그 기록 |
-| 모든 아티클 수집 실패 | 발송 취소, `send_logs`에 `failed` 기록 |
+| RSS fetch 실패 | 해당 소스 스킵, 다음 소스로 보충 |
+| 본문 크롤링 실패 | `fallbackDescription`으로 대체 |
+| Gemini API 실패 | 최대 2회 재시도 후 해당 아티클 제외 |
+| 아티클 N개 미만 | 가용한 아티클만으로 발송 |
+| SMTP 발송 실패 | 최대 3회 재시도 후 로그 기록 |
 
 ---
 
@@ -342,73 +320,185 @@ SYSTEM_PROMPT = """
 
 ```
 article-mailer/
+├── bin/
+│   └── article-mailer.js   # npm bin 진입점 (shebang 래퍼)
+├── src/
+│   ├── index.ts             # CLI + 스케줄러 진입점
+│   ├── settings.ts          # zod 설정 스키마
+│   ├── pipeline.ts          # 전체 파이프라인 조율
+│   ├── summarizer.ts        # Gemini API 2단계 요약
+│   ├── mailer.ts            # SMTP 발송 + Handlebars 렌더링
+│   ├── logger.ts            # pino 로거
+│   ├── collector/
+│   │   ├── base.ts          # Article 타입, AbstractCollector
+│   │   ├── hackerNews.ts    # HackerNewsCollector + crawlArticleContent
+│   │   ├── rss.ts           # RSSCollector
+│   │   └── arxiv.ts         # ArXivCollector
+│   ├── db/
+│   │   └── repository.ts    # JSON 파일 기반 발송 이력 관리
+│   └── templates/
+│       ├── email.html       # Handlebars HTML 템플릿
+│       └── email.txt        # Handlebars TXT 템플릿
+├── data/                    # .gitignore — JSON 스토리지
+├── dist/                    # .gitignore — tsc 컴파일 결과
 ├── docs/
 │   └── design.md
-├── src/
-│   ├── __init__.py
-│   ├── main.py             # 진입점 (Scheduler 시작 + CLI)
-│   ├── settings.py         # pydantic-settings 설정 클래스
-│   ├── pipeline.py         # 전체 파이프라인 조율
-│   ├── collector/
-│   │   ├── __init__.py
-│   │   ├── base.py         # AbstractCollector
-│   │   ├── hacker_news.py
-│   │   ├── arxiv.py
-│   │   └── rss.py          # 범용 RSS 수집기
-│   ├── summarizer.py       # Gemini API 요약 (async)
-│   ├── mailer.py           # SMTP 발송
-│   └── db/
-│       ├── __init__.py
-│       ├── models.py       # SQLAlchemy 모델
-│       └── repository.py   # sent_articles CRUD
-├── templates/
-│   ├── email.html          # Jinja2 HTML 템플릿
-│   └── email.txt           # plaintext fallback
-├── tests/
-│   ├── conftest.py
-│   ├── test_collector.py
-│   ├── test_summarizer.py
-│   ├── test_mailer.py
-│   └── test_pipeline.py
-├── data/                   # .gitignore — SQLite DB 저장
-├── alembic/                # DB 마이그레이션
-├── .env.example
-├── .gitignore
+├── package.json
+├── tsconfig.json
 ├── Dockerfile
 ├── docker-compose.yml
-├── pyproject.toml          # 의존성 + ruff 설정
-└── README.md
+├── .env.example
+├── .gitignore
+└── AGENTS.md
 ```
 
 ---
 
-## 13. 실행 방법
+## 13. 사용자 경험 (UX 흐름)
+
+두 가지 실행 경로를 지원한다. `.env` 파일 형식은 동일하다.
+
+---
+
+### 경로 A — Docker만 있는 경우 (스케줄 자동 실행)
+
+**대상**: 서버에 Docker만 설치된 사용자. 한 번 설정하면 매일 자동 발송.
 
 ```bash
-# 스케줄러 시작 (매일 SEND_HOUR시에 자동 발송)
-python -m src.main
+# 1. 파일 2개 받기
+curl -O https://raw.githubusercontent.com/.../docker-compose.yml
+curl -O https://raw.githubusercontent.com/.../.env.example
 
-# 즉시 수동 실행 (테스트용)
-python -m src.main --run-now
+# 2. 환경변수 설정
+mv .env.example .env
+# .env 편집: API 키, 이메일 정보, 수신자, 발송 시각
 
-# 아티클 수 지정해서 즉시 실행
-python -m src.main --run-now --count 3
-
-# Docker
+# 3. 실행 (백그라운드 데몬)
 docker compose up -d
+
+# 로그 확인
+docker compose logs -f
+```
+
+**docker-compose.yml** (사용자가 받는 파일 — 소스 불필요):
+```yaml
+services:
+  article-mailer:
+    image: toasting/article-mailer:latest   # Docker Hub 퍼블리시 이미지
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./data:/app/data                    # 발송 이력 영속화
+```
+
+- `restart: unless-stopped` → 서버 재시작 시 자동 복구
+- `.env`의 `SEND_HOUR` / `SEND_MINUTE` / `TIMEZONE` 으로 발송 시각 제어
+- 컨테이너 내부에서 `node-cron`이 스케줄 실행
+
+---
+
+### 경로 B — Node.js만 있는 경우 (수동 또는 외부 cron)
+
+**대상**: 로컬 머신이나 서버에 Node.js 설치된 사용자.
+
+```bash
+# 1. .env 파일 준비 (현재 디렉토리)
+curl -O https://raw.githubusercontent.com/.../.env.example
+mv .env.example .env
+# .env 편집
+
+# 2. 즉시 실행 (테스트)
+npx article-mailer --run-now
+
+# 3. 아티클 수 지정
+npx article-mailer --run-now --count 3
+
+# 4. 드라이런 (요약·발송 없이 수집만)
+npx article-mailer --dry-run
+
+# 5. 스케줄러 모드 (프로세스 유지)
+npx article-mailer
+```
+
+**자동화가 필요한 경우** — 시스템 cron에 등록:
+```bash
+# crontab -e
+0 8 * * * cd /home/user/mailer && npx article-mailer --run-now >> /var/log/article-mailer.log 2>&1
+```
+
+또는 글로벌 설치 후:
+```bash
+npm install -g article-mailer
+article-mailer --run-now
 ```
 
 ---
 
-## 14. 개발 단계
+### .env 필수 항목 요약
 
-| 단계 | 작업 | 완료 기준 |
+| 항목 | 설명 | 예시 |
 |---|---|---|
-| 1 | 프로젝트 초기화 (pyproject.toml, settings, DB) | `python -m src.main` 실행됨 |
-| 2 | Collector 구현 (Hacker News + RSS) | 아티클 목록 정상 수집 |
-| 3 | Summarizer 구현 (Gemini API, async) | 요약 JSON 정상 파싱 |
-| 4 | Mailer 구현 (SMTP + Jinja2 템플릿) | 실제 메일 수신 확인 |
-| 5 | Pipeline + Scheduler 연결 | 자동 발송 확인 |
-| 6 | 에러 처리 + 중복 방지 DB | 재실행 시 중복 없음 확인 |
-| 7 | 테스트 작성 | pytest 통과 |
-| 8 | Docker 패키징 | `docker compose up -d` 동작 |
+| `GEMINI_API_KEY` | Google AI Studio에서 발급 | `AIza...` |
+| `SMTP_USER` | 발신 Gmail 주소 | `you@gmail.com` |
+| `SMTP_PASSWORD` | Gmail 앱 비밀번호 | `xxxx xxxx xxxx xxxx` |
+| `RECIPIENT_EMAILS` | 수신자 (콤마 구분) | `a@example.com,b@example.com` |
+| `SEND_HOUR` | 발송 시각 (0~23) | `8` |
+| `SEND_MINUTE` | 발송 분 (0~59) | `0` |
+| `TIMEZONE` | 타임존 | `Asia/Seoul` |
+
+나머지는 기본값이 있어 생략 가능.
+
+---
+
+### CLI 플래그 전체
+
+| 플래그 | 설명 |
+|---|---|
+| _(없음)_ | 스케줄러 모드 — 프로세스 유지, 지정 시각에 자동 실행 |
+| `--run-now` | 즉시 1회 실행 후 종료 |
+| `--count N` | 수집 아티클 수 override (기본: `ARTICLE_COUNT`) |
+| `--dry-run` | 수집·크롤링까지만 실행, Gemini 요약·발송 스킵 |
+
+---
+
+## 14. 실행 방법 (개발)
+
+```bash
+npm install
+npm run dev               # tsx로 직접 실행 (스케줄러 모드)
+npm run dev -- --run-now  # 즉시 실행
+npm run build             # tsc 컴파일
+npm start                 # 컴파일된 dist/ 실행
+```
+
+---
+
+## 15. 배포
+
+### npm 배포
+
+```bash
+npm run build    # tsc + templates 복사
+npm publish      # npm registry 배포
+```
+
+`package.json` 핵심 필드:
+```json
+{
+  "bin": { "article-mailer": "./bin/article-mailer.js" },
+  "files": ["dist", "bin"],
+  "scripts": {
+    "build": "tsc && cp -r src/templates dist/templates",
+    "prepublishOnly": "npm run build"
+  }
+}
+```
+
+### Docker Hub 배포
+
+```bash
+docker build -t toasting/article-mailer:latest .
+docker push toasting/article-mailer:latest
+```
+
+사용자는 `docker-compose.yml` + `.env` 두 파일만 있으면 소스 없이 실행 가능.
