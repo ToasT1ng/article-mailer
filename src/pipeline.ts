@@ -30,8 +30,8 @@ export async function runPipeline(settings: Settings, options: { dryRun?: boolea
   const unsentUrlSet = new Set(repo.filterUnsent(deduped.map((a) => a.url)));
   const unsent = deduped.filter((a) => unsentUrlSet.has(a.url));
   const sorted = unsent.sort((a, b) => {
-    // 최신순 기본 정렬, HN score가 있으면 가중치 반영 (score 100점당 1시간 보정)
-    const scoreBoostMs = ((b.score ?? 0) - (a.score ?? 0)) * 36_000;
+    // 최신순 기본 정렬, HN score 반영 (100점당 1시간 보정, 최대 500점=5시간 상한)
+    const scoreBoostMs = (Math.min(b.score ?? 0, 500) - Math.min(a.score ?? 0, 500)) * 36_000;
     return (b.publishedAt.getTime() + scoreBoostMs) - a.publishedAt.getTime();
   });
 

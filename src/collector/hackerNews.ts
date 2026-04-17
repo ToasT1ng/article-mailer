@@ -1,3 +1,4 @@
+// @mozilla/readability의 타입 정의가 DOM Document를 참조하므로 파일 스코프로 추가
 /// <reference lib="dom" />
 import * as cheerio from "cheerio";
 import { Readability } from "@mozilla/readability";
@@ -90,7 +91,7 @@ export class HackerNewsCollector extends AbstractCollector {
         publishedAt: new Date(item.time * 1000),
         fallbackDescription: item.text
           ? cheerio.load(item.text).text().slice(0, 300)
-          : item.title,
+          : `${item.title} (HN score: ${item.score})`,
         score: item.score,
       });
     }
