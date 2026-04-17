@@ -90,13 +90,13 @@ ${articles
   )
   .join("\n\n")}
 
-JSON 배열로만 응답:
+JSON 배열로만 응답 (category는 반드시 "trend_industry", "trend_llm", "impact" 중 하나):
 [{
   "index": 0,
-  "category": "trend_industry | trend_llm | impact",
+  "category": "trend_industry",
   "one_liner": "한 줄 요약 (50자 이내)",
   "body": "3~5문장 요약",
-  "importance": "상 | 중 | 하",
+  "importance": "상",
   "read_time_min": 3
 }]`;
 

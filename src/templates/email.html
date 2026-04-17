@@ -48,9 +48,8 @@
 
     .body-text { font-size: 14px; color: #444; line-height: 1.8; margin: 0 0 16px; }
 
-    .article-footer { display: flex; align-items: center; justify-content: space-between; }
-    .source-tag { font-size: 12px; color: #999; }
-    .read-more { display: inline-block; padding: 8px 20px; background: #302b63; color: #fff; border-radius: 8px; font-size: 13px; text-decoration: none; font-weight: 600; }
+    .article-footer { display: flex; align-items: center; }
+    .read-more { display: inline-block; padding: 8px 20px; background: #302b63; color: #fff; border-radius: 8px; font-size: 13px; text-decoration: none; font-weight: 600; margin-left: auto; }
 
     /* Footer */
     .footer { background: #f9f9fb; padding: 22px 40px; text-align: center; font-size: 12px; color: #aaa; border-radius: 0 0 16px 16px; border-top: 1px solid #eee; }
@@ -114,7 +113,6 @@
         <div class="one-liner-box"><p>{{oneLiner}}</p></div>
         <p class="body-text">{{body}}</p>
         <div class="article-footer">
-          <span class="source-tag"></span>
           <a class="read-more" href="{{article.url}}">원문 읽기 →</a>
         </div>
       </div>
