@@ -1,10 +1,7 @@
 services:
   article-mailer:
-    build: .
+    image: toasting/article-mailer:latest
     restart: unless-stopped
-    env_file:
-      - .env
+    env_file: .env
     volumes:
       - ./data:/app/data
-    environment:
-      - DATABASE_URL=sqlite:////app/data/article_mailer.db

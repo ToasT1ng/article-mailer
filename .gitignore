@@ -2,13 +2,7 @@
 .env.*
 !.env.example
 data/
-__pycache__/
-*.pyc
-*.pyo
-.pytest_cache/
-.ruff_cache/
 dist/
-*.egg-info/
+node_modules/
 .idea/
-.venv/
-venv/
+*.js.map

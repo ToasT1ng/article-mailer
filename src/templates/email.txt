@@ -1,0 +1,18 @@
+AI 데일리 | {{formattedDate}} | 오늘의 AI 아티클 {{count}}선
+=============================================================
+
+{{#each items}}
+[{{@index}}] {{article.title}}
+출처: {{article.source}} | 중요도: {{importance}} | 읽기 시간: {{readTimeMin}}분
+
+한 줄 요약: {{oneLiner}}
+
+{{body}}
+
+원문: {{article.url}}
+
+-------------------------------------------------------------
+
+{{/each}}
+
+이 메일은 article-mailer가 자동으로 생성했습니다.
