@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Article } from "./collector/base.js";
 import logger from "./logger.js";
+import { withRetry } from "./utils/retry.js";
 
 const log = logger.child({ module: "summarizer" });
 
@@ -26,20 +27,6 @@ interface SummarizeResult {
   read_time_min: number;
 }
 
-async function withRetry<T>(fn: () => Promise<T>, maxRetries = 2): Promise<T> {
-  let lastError: unknown;
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      return await fn();
-    } catch (err) {
-      lastError = err;
-      if (attempt < maxRetries) {
-        await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, attempt)));
-      }
-    }
-  }
-  throw lastError;
-}
 
 export class Summarizer {
   private client: GoogleGenerativeAI;

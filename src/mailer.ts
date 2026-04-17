@@ -5,6 +5,7 @@ import path from "path";
 import { Summary } from "./summarizer.js";
 import { Settings, getRecipients } from "./settings.js";
 import logger from "./logger.js";
+import { withRetry } from "./utils/retry.js";
 
 const log = logger.child({ module: "mailer" });
 
@@ -12,21 +13,6 @@ function loadTemplate(name: string): HandlebarsTemplateDelegate {
   const templatePath = path.join(__dirname, "templates", name);
   const src = fs.readFileSync(templatePath, "utf-8");
   return Handlebars.compile(src);
-}
-
-async function withRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
-  let lastError: unknown;
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      return await fn();
-    } catch (err) {
-      lastError = err;
-      if (attempt < maxRetries) {
-        await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, attempt)));
-      }
-    }
-  }
-  throw lastError;
 }
 
 export async function sendMail(summaries: Summary[], settings: Settings): Promise<void> {
@@ -70,7 +56,7 @@ export async function sendMail(summaries: Summary[], settings: Settings): Promis
       text,
       html,
     });
-  });
+  }, 3);
 
   log.info({ event: "mailer.sent", recipients: recipients.length, articles: summaries.length });
 }
