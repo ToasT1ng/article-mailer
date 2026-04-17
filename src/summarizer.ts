@@ -97,15 +97,21 @@ JSON 배열로만 응답:
 }]`;
 
     const results = await withRetry(() => this.callGemini<SummarizeResult[]>(prompt));
+    const seen = new Set<number>();
     const summaries: Summary[] = [];
     for (const r of results) {
       const article = articles[r.index];
-      if (!article) continue;
+      if (!article || seen.has(r.index)) continue;
+      seen.add(r.index);
+      const importance: Summary["importance"] =
+        r.importance === "상" || r.importance === "중" || r.importance === "하"
+          ? r.importance
+          : "중";
       summaries.push({
         article: { ...article, category: r.category },
         oneLiner: r.one_liner,
         body: r.body,
-        importance: r.importance,
+        importance,
         readTimeMin: r.read_time_min,
       });
     }

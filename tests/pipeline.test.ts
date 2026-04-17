@@ -100,4 +100,14 @@ describe("runPipeline", () => {
     );
     expect(mocks.markSent).not.toHaveBeenCalled();
   });
+
+  it("dry-run 모드에서는 sendMail과 addLog를 호출하지 않는다", async () => {
+    mocks.hnFetch.mockResolvedValue([makeArticle(1)]);
+
+    await runPipeline(settings, { dryRun: true });
+
+    expect(mocks.sendMail).not.toHaveBeenCalled();
+    expect(mocks.addLog).not.toHaveBeenCalled();
+    expect(mocks.markSent).not.toHaveBeenCalled();
+  });
 });
