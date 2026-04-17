@@ -84,6 +84,9 @@ ARTICLE_LANGUAGE=ko        # ko or en
 
 # Data path
 DATA_PATH=./data/article_mailer.json
+
+# Custom RSS feeds file path (optional, ignored if not present)
+FEEDS_PATH=./feeds.json
 ```
 
 | Variable | Default | Description |
@@ -101,6 +104,22 @@ DATA_PATH=./data/article_mailer.json
 | `ARTICLE_COUNT` | `5` | Articles per delivery (max 20) |
 | `ARTICLE_LANGUAGE` | `ko` | Summary language (`ko` or `en`) |
 | `DATA_PATH` | `./data/article_mailer.json` | Path for sent history storage |
+| `FEEDS_PATH` | `./feeds.json` | Path to custom RSS feeds file (optional) |
+
+## Adding Custom RSS Feeds
+
+Create a `feeds.json` file in the same directory where you run the command. These feeds are **appended** to the built-in sources — the defaults are always included.
+
+```json
+[
+  { "url": "https://d2.naver.com/feed.xml", "source": "Naver D2" },
+  { "url": "https://tech.kakao.com/feed/", "source": "Kakao Tech" },
+  { "url": "https://engineering.linecorp.com/ko/feed", "source": "LINE Engineering" },
+  { "url": "https://www.aitimes.com/rss/allArticle.xml", "source": "AI Times Korea" }
+]
+```
+
+If `feeds.json` does not exist, it is silently ignored. You can use a different path by setting `FEEDS_PATH` in your `.env`.
 
 ## Usage
 

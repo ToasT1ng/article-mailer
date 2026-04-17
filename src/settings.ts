@@ -19,6 +19,7 @@ const settingsSchema = z.object({
   SMTP_PASSWORD: z.string().min(1),
   RECIPIENT_EMAILS: z.string().min(1),
   DATA_PATH: z.string().default("./data/article_mailer.json"),
+  FEEDS_PATH: z.string().default("./feeds.json"),
 });
 
 export type Settings = z.infer<typeof settingsSchema>;

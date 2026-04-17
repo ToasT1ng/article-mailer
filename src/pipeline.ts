@@ -18,7 +18,7 @@ export async function runPipeline(settings: Settings, options: { dryRun?: boolea
 
   const [hnArticles, rssArticles, arxivArticles] = await Promise.allSettled([
     new HackerNewsCollector().fetch(),
-    new RSSCollector().fetch(),
+    new RSSCollector(settings.FEEDS_PATH).fetch(),
     new ArXivCollector().fetch(),
   ]).then((results) =>
     results.map((r) => (r.status === "fulfilled" ? r.value : []))

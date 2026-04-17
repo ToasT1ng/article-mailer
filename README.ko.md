@@ -84,6 +84,9 @@ ARTICLE_LANGUAGE=ko        # ko 또는 en
 
 # 데이터 저장 경로
 DATA_PATH=./data/article_mailer.json
+
+# 추가 RSS 피드 설정 파일 경로 (선택 사항, 없으면 무시)
+FEEDS_PATH=./feeds.json
 ```
 
 | 변수 | 기본값 | 설명 |
@@ -101,6 +104,22 @@ DATA_PATH=./data/article_mailer.json
 | `ARTICLE_COUNT` | `5` | 하루에 발송할 아티클 개수 (최대 20) |
 | `ARTICLE_LANGUAGE` | `ko` | 요약 언어 (`ko` 또는 `en`) |
 | `DATA_PATH` | `./data/article_mailer.json` | 발송 이력 저장 경로 |
+| `FEEDS_PATH` | `./feeds.json` | 추가 RSS 피드 설정 파일 경로 (선택 사항) |
+
+## 커스텀 RSS 피드 추가
+
+명령을 실행하는 디렉토리에 `feeds.json` 파일을 생성하면 기본 소스에 **추가**됩니다. 기본 피드는 항상 포함됩니다.
+
+```json
+[
+  { "url": "https://d2.naver.com/feed.xml", "source": "Naver D2" },
+  { "url": "https://tech.kakao.com/feed/", "source": "Kakao Tech" },
+  { "url": "https://engineering.linecorp.com/ko/feed", "source": "LINE Engineering" },
+  { "url": "https://www.aitimes.com/rss/allArticle.xml", "source": "AI Times Korea" }
+]
+```
+
+`feeds.json`이 없으면 무시됩니다. `.env`의 `FEEDS_PATH`로 파일 경로를 변경할 수 있습니다.
 
 ## 실행 방법
 
