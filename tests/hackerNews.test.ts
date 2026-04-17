@@ -25,7 +25,7 @@ function mockFetch(ok: boolean, html = "") {
 
 describe("crawlArticleContent", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    mocks.readabilityParse.mockReset();
   });
 
   it("Readability가 200자 이상 텍스트를 반환하면 해당 텍스트를 반환한다", async () => {
@@ -58,7 +58,7 @@ describe("crawlArticleContent", () => {
   });
 
   it("HTTP 응답이 ok가 아니면 undefined를 반환한다", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 404 }));
+    mockFetch(false);
 
     const result = await crawlArticleContent("https://example.com");
     expect(result).toBeUndefined();

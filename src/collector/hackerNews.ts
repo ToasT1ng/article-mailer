@@ -91,7 +91,7 @@ export class HackerNewsCollector extends AbstractCollector {
         publishedAt: new Date(item.time * 1000),
         fallbackDescription: item.text
           ? cheerio.load(item.text).text().slice(0, 300)
-          : `${item.title} (HN score: ${item.score})`,
+          : `(HN score: ${item.score}) ${item.title}`,
         score: item.score,
       });
     }
