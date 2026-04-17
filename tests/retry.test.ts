@@ -6,7 +6,7 @@ afterEach(() => {
 });
 
 function noDelay() {
-  vi.spyOn(global, "setTimeout").mockImplementation((fn: any) => { fn(); return 0 as any; });
+  vi.spyOn(global, "setTimeout").mockImplementation((fn: Parameters<typeof setTimeout>[0]) => { fn?.(); return 0 as any; });
 }
 
 describe("withRetry", () => {

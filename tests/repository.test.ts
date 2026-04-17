@@ -4,17 +4,17 @@ import os from "os";
 import path from "path";
 import { ArticleRepository } from "../src/db/repository";
 
-let tmpPath: string;
-
-beforeEach(() => {
-  tmpPath = path.join(os.tmpdir(), `repo-test-${Date.now()}.json`);
-});
-
-afterEach(() => {
-  if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath);
-});
-
 describe("ArticleRepository", () => {
+  let tmpPath: string;
+
+  beforeEach(() => {
+    tmpPath = path.join(os.tmpdir(), `repo-test-${Date.now()}.json`);
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath);
+  });
+
   it("파일이 없으면 빈 상태로 초기화된다", () => {
     const repo = new ArticleRepository(tmpPath);
     const result = repo.filterUnsent(["https://a.com"]);
@@ -49,7 +49,6 @@ describe("ArticleRepository", () => {
   });
 
   it("손상된 JSON 파일이면 빈 상태로 폴백한다", () => {
-    fs.mkdirSync(path.dirname(tmpPath), { recursive: true });
     fs.writeFileSync(tmpPath, "{ invalid json", "utf-8");
 
     const repo = new ArticleRepository(tmpPath);
