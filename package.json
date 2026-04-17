@@ -1,0 +1,49 @@
+{
+  "name": "article-mailer",
+  "version": "1.0.0",
+  "description": "매일 AI 아티클을 수집·요약하여 이메일로 발송하는 자동화 도구",
+  "main": "dist/index.js",
+  "bin": {
+    "article-mailer": "./bin/article-mailer.js"
+  },
+  "files": [
+    "dist",
+    "bin"
+  ],
+  "scripts": {
+    "build": "tsc && cp -r src/templates dist/templates",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js",
+    "prepublishOnly": "npm run build"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "keywords": [
+    "ai",
+    "newsletter",
+    "mailer",
+    "gemini",
+    "rss"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "cheerio": "^1.0.0",
+    "dotenv": "^16.4.0",
+    "handlebars": "^4.7.0",
+    "node-cron": "^3.0.0",
+    "nodemailer": "^6.9.0",
+    "pino": "^9.1.0",
+    "pino-pretty": "^11.0.0",
+    "rss-parser": "^3.13.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/nodemailer": "^6.4.0",
+    "@types/node-cron": "^3.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.4.0"
+  }
+}
