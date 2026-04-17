@@ -60,3 +60,31 @@ describe("Summarizer.screen", () => {
     expect(result).toHaveLength(2);
   });
 });
+
+describe("Summarizer.selectAndSummarize", () => {
+  let summarizer: Summarizer;
+
+  beforeEach(() => {
+    summarizer = new Summarizer("test-key", "gemini-2.5-flash");
+  });
+
+  it("중복 인덱스를 제거한다", async () => {
+    const articles = [makeArticle(0), makeArticle(1)];
+    vi.spyOn(summarizer as any, "callGemini").mockResolvedValue([
+      { index: 0, category: "impact", one_liner: "요약", body: "본문", importance: "상", read_time_min: 1 },
+      { index: 0, category: "trend", one_liner: "중복", body: "중복", importance: "하", read_time_min: 2 },
+    ]);
+    const result = await summarizer.selectAndSummarize(articles, 2);
+    expect(result).toHaveLength(1);
+    expect(result[0].article.url).toBe(articles[0].url);
+  });
+
+  it("잘못된 importance 값은 '중'으로 폴백한다", async () => {
+    const articles = [makeArticle(0)];
+    vi.spyOn(summarizer as any, "callGemini").mockResolvedValue([
+      { index: 0, category: "impact", one_liner: "요약", body: "본문", importance: "high", read_time_min: 1 },
+    ]);
+    const result = await summarizer.selectAndSummarize(articles, 1);
+    expect(result[0].importance).toBe("중");
+  });
+});
