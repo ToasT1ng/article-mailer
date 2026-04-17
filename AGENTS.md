@@ -4,58 +4,70 @@
 
 ## 프로젝트 개요
 
-매일 AI 관련 아티클을 수집하고 Gemini API로 요약하여 이메일로 발송하는 Python 자동화 도구.
-설계 문서는 `docs/design.md`에 있으며, 모든 구현은 이 문서를 따른다.
+매일 AI 관련 아티클을 수집하고 Gemini API로 요약하여 이메일로 발송하는 **TypeScript/Node.js** 자동화 도구.
 
 ## 기술 스택
 
-- Python 3.12+, asyncio 기반 비동기 처리
-- `google-genai` SDK (Gemini API)
-- `pydantic-settings` (환경변수 설정)
-- `feedparser` + `httpx` (RSS/HTTP 수집)
-- `beautifulsoup4` + `lxml` (본문 크롤링)
-- `SQLAlchemy 2.0` + `alembic` (SQLite ORM, 마이그레이션)
-- `APScheduler` (인프로세스 cron 스케줄러)
-- `jinja2` (이메일 HTML/TXT 템플릿)
-- `structlog` (구조화 로깅, JSON 출력)
-- `ruff` (린터 + 포매터)
-- `pytest` + `pytest-asyncio` + `pytest-httpx` (테스트)
+- **Node.js 20+**, TypeScript 5.4+, ESM 모듈
+- `@google/generative-ai` (Gemini API SDK)
+- `zod` (환경변수 스키마 검증)
+- `rss-parser` (RSS 수집), `cheerio` (HTML 크롤링)
+- `node-cron` (인프로세스 cron 스케줄러)
+- `handlebars` (이메일 HTML/TXT 템플릿)
+- `nodemailer` (SMTP 발송)
+- `pino` + `pino-pretty` (구조화 로깅)
+- `vitest` (테스트)
+- JSON 파일 기반 데이터 저장 (`data/article_mailer.json`)
 
 ## 코드 컨벤션
 
-- ruff 설정: `line-length = 100`, `target-version = "py312"`, lint rules `["E", "F", "I", "UP"]`, `quote-style = "double"`
-- 타입 힌트 필수. `str | None` 유니온 문법 사용 (Python 3.12+)
-- `as any`, `type: ignore` 금지
-- 주석과 docstring은 한국어
-- 로거는 `structlog.get_logger()`를 모듈 최상단에 선언
+- TypeScript strict 모드, 타입 힌트 필수
+- `as any`, `@ts-ignore`, `type: ignore` 금지
+- 주석과 로그 이벤트명은 한국어 허용
+- 로거는 `logger.child({ module: "모듈명" })`으로 파일 최상단에 선언
 - 로그 이벤트명은 `모듈명.동작` 형식 (예: `pipeline.start`, `mailer.sent`)
+- import 시 `.js` 확장자 명시 (ESM 규칙)
 
 ## 아키텍처 규칙
 
-- 진입점: `src/main.py` (`python -m src.main`)
-- 파이프라인 흐름: 수집(`collector/`) → 크롤링 → 요약(`summarizer.py`) → 발송(`mailer.py`) → DB 기록(`db/`)
-- 모든 설정은 `src/settings.py`의 `Settings` 클래스를 통해 환경변수로 주입. 하드코딩 금지.
-- 수집기는 `AbstractCollector`를 상속하고 `async def fetch() -> list[Article]`을 구현
-- 외부 API 호출은 반드시 `asyncio.gather`로 병렬 처리
-- Gemini API 호출 시 JSON 응답 모드 사용
-- SMTP 발송과 Gemini API 호출은 재시도 로직 포함 (exponential backoff)
-- DB 중복 체크: `ArticleRepository.filter_unsent()`로 이미 발송된 URL 제외
+- 진입점: `src/index.ts` → 빌드 후 `node dist/index.js`
+- 파이프라인 흐름: 수집(`collector/`) → 크롤링 → 스크리닝 → 요약(`summarizer.ts`) → 발송(`mailer.ts`) → 이력 기록(`db/`)
+- 모든 설정은 `src/settings.ts`의 `loadSettings()` (zod 기반)를 통해 환경변수로 주입. 하드코딩 금지.
+- 수집기는 `AbstractCollector`를 상속하고 `async fetch(): Promise<Article[]>`를 구현
+- 외부 수집은 `Promise.allSettled`로 병렬 처리, 개별 실패가 전체를 막지 않도록 함
+- Gemini API 호출은 JSON 응답 모드 사용 (`responseMimeType: "application/json"`)
+- SMTP 발송과 Gemini API 호출은 `withRetry()` (지수 백오프)로 감쌈
+- 중복 발송 방지: `ArticleRepository.filterUnsent()`로 이미 발송된 URL 제외
+
+## 아티클 카테고리
+
+Gemini가 분류하는 3가지 카테고리:
+
+- `trend_industry`: OpenAI·Anthropic·Google·Meta 등 주요 기업의 LLM 제품·서비스 동향 (전체의 약 60%)
+- `impact`: AI가 의료·법률·교육 등 실제 산업에 적용되는 사례 (전체의 약 20%)
+- `trend_llm`: LLM 아키텍처·학습 기법·벤치마크 등 모델 기술 연구 (전체의 약 20%)
+
+## 요약 파이프라인 (2단계)
+
+1. **`screen()`**: 수집된 후보군에서 카테고리 비율에 맞게 상위 N개 선별
+2. **`selectAndSummarize()`**: 선별된 아티클을 크롤링 후 최종 요약 (`oneLiner`, `body`, `importance`, `readTimeMin`)
+
+## 데이터 저장
+
+- SQLite/ORM 없음. JSON 파일 단일 스토어 (`DATA_PATH`, 기본 `./data/article_mailer.json`)
+- `ArticleRepository` 클래스가 로드/저장 담당
+- Docker 볼륨으로 `data/` 디렉토리 마운트
 
 ## 테스트 규칙
 
-- `pytest-asyncio` mode: `auto`
-- 외부 HTTP 요청은 `httpx_mock` (pytest-httpx) 또는 `unittest.mock.AsyncMock`으로 모킹
-- 테스트 공통 fixture는 `tests/conftest.py`에 정의
-- Gemini API 호출 테스트 시 `AsyncMock`으로 `summarizer._client`를 교체
-
-## DB 마이그레이션
-
-- 스키마 변경 시 `alembic/versions/`에 마이그레이션 파일 추가
-- `ArticleRepository.__init__`에서 `Base.metadata.create_all()`을 호출하므로 개발 시에는 자동 생성됨
-- 프로덕션 스키마 변경은 반드시 alembic migration으로 관리
+- `vitest` 사용, 설정은 `vitest.config.mts`
+- 외부 HTTP 요청은 `vi.fn()` 또는 `vi.spyOn()`으로 모킹
+- Gemini API 호출 테스트 시 `vi.spyOn(summarizer['client'], ...)`으로 교체
+- 테스트 공통 fixture는 `tests/conftest` 대신 각 테스트 파일 내 `beforeEach`/`vi.mock` 활용
 
 ## 배포
 
 - Docker: `Dockerfile` + `docker-compose.yml`
 - 모든 설정은 `.env` 파일로 주입 (`.env.example` 참조)
-- SQLite DB는 `data/` 디렉토리에 저장되며 Docker volume으로 마운트
+- 빌드: `npm run build` (tsc + 템플릿 복사)
+- 실행: `node dist/index.js` (스케줄러) | `node dist/index.js --run-now` (즉시) | `node dist/index.js --dry-run` (드라이런)

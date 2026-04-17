@@ -1,18 +1,25 @@
-AI 데일리 | {{formattedDate}} | 오늘의 AI 아티클 {{count}}선
-=============================================================
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🤖 AI 데일리 | {{formattedDate}}
+오늘의 AI 아티클 {{count}}선
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 목차
+{{#each items}}  {{numberPlus1 @index}}. {{article.title}}
+{{/each}}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 {{#each items}}
-[{{@index}}] {{article.title}}
+[{{numberPlus1 @index}}/{{../count}}] {{article.title}}
 출처: {{article.source}} | 중요도: {{importance}} | 읽기 시간: {{readTimeMin}}분
 
-한 줄 요약: {{oneLiner}}
+💡 {{oneLiner}}
 
 {{body}}
 
-원문: {{article.url}}
+▶ 원문: {{article.url}}
 
--------------------------------------------------------------
+─────────────────────────────────────────────────
 
 {{/each}}
-
-이 메일은 article-mailer가 자동으로 생성했습니다.
+article-mailer · 자동 생성된 뉴스레터

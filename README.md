@@ -35,15 +35,21 @@ npm run build
    ```
 2. `.env` 파일에 실제 크리덴셜을 입력합니다.
 
-| 변수 | 설명 |
-|------|------|
-| `GEMINI_API_KEY` | Google Gemini API 키 ([AI Studio](https://aistudio.google.com/apikey)에서 발급) |
-| `SMTP_USER` | 발송용 Gmail 계정 |
-| `SMTP_PASSWORD` | Gmail 앱 비밀번호 |
-| `RECIPIENT_EMAILS` | 수신자 이메일 주소 (쉼표로 구분하여 여러 명 지정 가능) |
-| `SEND_HOUR` | 메일 발송 시각 (시, 0-23) |
-| `SEND_MINUTE` | 메일 발송 시각 (분, 0-59) |
-| `ARTICLE_COUNT` | 하루에 발송할 아티클 개수 |
+| 변수 | 기본값 | 설명 |
+|------|--------|------|
+| `GEMINI_API_KEY` | (필수) | Google Gemini API 키 ([AI Studio](https://aistudio.google.com/apikey)에서 발급) |
+| `GEMINI_MODEL` | `gemini-2.5-flash` | 사용할 Gemini 모델명 |
+| `SMTP_USER` | (필수) | 발송용 Gmail 계정 |
+| `SMTP_PASSWORD` | (필수) | Gmail 앱 비밀번호 |
+| `SMTP_HOST` | `smtp.gmail.com` | SMTP 서버 주소 |
+| `SMTP_PORT` | `587` | SMTP 포트 |
+| `RECIPIENT_EMAILS` | (필수) | 수신자 이메일 주소 (쉼표로 구분하여 여러 명 지정 가능) |
+| `SEND_HOUR` | `8` | 메일 발송 시각 (시, 0-23) |
+| `SEND_MINUTE` | `0` | 메일 발송 시각 (분, 0-59) |
+| `TIMEZONE` | `Asia/Seoul` | 스케줄 기준 타임존 |
+| `ARTICLE_COUNT` | `5` | 하루에 발송할 아티클 개수 (최대 20) |
+| `ARTICLE_LANGUAGE` | `ko` | 요약 언어 (`ko` 또는 `en`) |
+| `DATA_PATH` | `./data/article_mailer.json` | 발송 이력 저장 경로 |
 
 ## 실행 방법
 
