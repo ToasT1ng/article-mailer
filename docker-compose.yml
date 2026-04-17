@@ -1,5 +1,6 @@
 services:
   article-mailer:
+    build: .
     image: toasting/article-mailer:latest
     restart: unless-stopped
     env_file: .env

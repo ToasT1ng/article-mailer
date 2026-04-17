@@ -9,7 +9,7 @@ import { withRetry } from "./utils/retry.js";
 
 const log = logger.child({ module: "mailer" });
 
-function loadTemplate(name: string): HandlebarsTemplateDelegate {
+function loadTemplate(name: string): Handlebars.TemplateDelegate {
   const templatePath = path.join(__dirname, "templates", name);
   const src = fs.readFileSync(templatePath, "utf-8");
   return Handlebars.compile(src);
@@ -17,6 +17,10 @@ function loadTemplate(name: string): HandlebarsTemplateDelegate {
 
 export async function sendMail(summaries: Summary[], settings: Settings): Promise<void> {
   const recipients = getRecipients(settings);
+  if (recipients.length === 0) {
+    log.warn({ event: "mailer.no_recipients" });
+    return;
+  }
   const htmlTemplate = loadTemplate("email.html");
   const txtTemplate = loadTemplate("email.txt");
 
