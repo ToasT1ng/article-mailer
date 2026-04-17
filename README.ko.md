@@ -80,7 +80,10 @@ TIMEZONE=Asia/Seoul
 
 # 아티클 설정
 ARTICLE_COUNT=5            # 하루 발송 개수 (최대 20)
-ARTICLE_LANGUAGE=ko        # ko 또는 en
+# 요약 출력 언어. 언어의 영어 전체 이름을 사용하세요.
+# 예시: English, Korean, Japanese, Spanish, French
+# 참고: importance 값은 언어 설정에 관계없이 항상 영어로 고정됩니다 (high, medium, low).
+ARTICLE_LANGUAGE=English
 
 # 데이터 저장 경로
 DATA_PATH=./data/article_mailer.json
@@ -102,7 +105,7 @@ FEEDS_PATH=./feeds.json
 | `SEND_MINUTE` | `0` | 메일 발송 시각 (분, 0-59) |
 | `TIMEZONE` | `Asia/Seoul` | 스케줄 기준 타임존 |
 | `ARTICLE_COUNT` | `5` | 하루에 발송할 아티클 개수 (최대 20) |
-| `ARTICLE_LANGUAGE` | `ko` | 요약 언어 (`ko` 또는 `en`) |
+| `ARTICLE_LANGUAGE` | `English` | 요약 출력 언어. 언어의 영어 전체 이름을 사용하세요 (예: `English`, `Korean`, `Japanese`, `Spanish`). `importance` 값은 언어 설정과 무관하게 항상 영어로 고정됩니다. |
 | `DATA_PATH` | `./data/article_mailer.json` | 발송 이력 저장 경로 |
 | `FEEDS_PATH` | `./feeds.json` | 추가 RSS 피드 설정 파일 경로 (선택 사항) |
 

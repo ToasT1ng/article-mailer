@@ -80,7 +80,7 @@ TIMEZONE=Asia/Seoul
 
 # Article settings
 ARTICLE_COUNT=5            # Articles per day (max 20)
-ARTICLE_LANGUAGE=ko        # ko or en
+ARTICLE_LANGUAGE=English   # Use the full English name of the language (e.g. English, Korean, Japanese)
 
 # Data path
 DATA_PATH=./data/article_mailer.json
@@ -102,7 +102,7 @@ FEEDS_PATH=./feeds.json
 | `SEND_MINUTE` | `0` | Scheduled send minute (0–59) |
 | `TIMEZONE` | `Asia/Seoul` | Scheduler timezone |
 | `ARTICLE_COUNT` | `5` | Articles per delivery (max 20) |
-| `ARTICLE_LANGUAGE` | `ko` | Summary language (`ko` or `en`) |
+| `ARTICLE_LANGUAGE` | `English` | Output language for summaries. Use the full English name of the language (e.g. `English`, `Korean`, `Japanese`, `Spanish`). Note: `importance` values are always in English (`high`, `medium`, `low`). |
 | `DATA_PATH` | `./data/article_mailer.json` | Path for sent history storage |
 | `FEEDS_PATH` | `./feeds.json` | Path to custom RSS feeds file (optional) |
 
