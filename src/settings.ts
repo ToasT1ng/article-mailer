@@ -3,11 +3,13 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+export const ARTICLE_COUNT_MAX = 20;
+
 const settingsSchema = z.object({
   SEND_HOUR: z.coerce.number().int().min(0).max(23).default(8),
   SEND_MINUTE: z.coerce.number().int().min(0).max(59).default(0),
   TIMEZONE: z.string().default("Asia/Seoul"),
-  ARTICLE_COUNT: z.coerce.number().int().min(1).max(20).default(5),
+  ARTICLE_COUNT: z.coerce.number().int().min(1).max(ARTICLE_COUNT_MAX).default(5),
   ARTICLE_LANGUAGE: z.string().default("ko"),
   GEMINI_API_KEY: z.string().min(1),
   GEMINI_MODEL: z.string().default("gemini-2.5-flash"),

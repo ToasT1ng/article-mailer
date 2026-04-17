@@ -41,8 +41,10 @@
     "rss-parser": "^3.13.0",
     "zod": "^3.23.0"
   },
+  "optionalDependencies": {
+    "@rolldown/binding-darwin-arm64": "^1.0.0-rc.16"
+  },
   "devDependencies": {
-    "@rolldown/binding-darwin-arm64": "^1.0.0-rc.16",
     "@types/node": "^20.0.0",
     "@types/node-cron": "^3.0.0",
     "@types/nodemailer": "^6.4.0",
