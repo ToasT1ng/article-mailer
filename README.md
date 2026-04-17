@@ -48,13 +48,41 @@ npm run build
 
 ## 설정 방법
 
-1. `.env` 파일을 생성하고 크리덴셜을 입력합니다.
-   ```bash
-   # npm으로 설치한 경우 — 실행할 디렉토리에 .env 파일 생성
-   # 소스코드에서 빌드한 경우
-   cp .env.example .env
-   ```
-2. `.env` 파일에 실제 크리덴셜을 입력합니다.
+실행할 디렉토리에 `.env` 파일을 생성합니다.
+
+```bash
+# 스케줄러를 상주시킬 디렉토리 (예시)
+mkdir ~/article-mailer && cd ~/article-mailer
+```
+
+아래 내용을 `.env` 파일로 저장하고 값을 채웁니다.
+
+```dotenv
+# Gemini API
+GEMINI_API_KEY=            # 필수. https://aistudio.google.com/apikey 에서 발급
+GEMINI_MODEL=gemini-2.5-flash
+
+# SMTP
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=                 # 필수. 발송용 Gmail 계정
+SMTP_PASSWORD=             # 필수. Gmail 앱 비밀번호
+
+# 수신자 (쉼표로 여러 명 지정 가능)
+RECIPIENT_EMAILS=          # 필수. 예: a@gmail.com,b@gmail.com
+
+# 스케줄 설정
+SEND_HOUR=8
+SEND_MINUTE=0
+TIMEZONE=Asia/Seoul
+
+# 아티클 설정
+ARTICLE_COUNT=5            # 하루 발송 개수 (최대 20)
+ARTICLE_LANGUAGE=ko        # ko 또는 en
+
+# 데이터 저장 경로
+DATA_PATH=./data/article_mailer.json
+```
 
 | 변수 | 기본값 | 설명 |
 |------|--------|------|
