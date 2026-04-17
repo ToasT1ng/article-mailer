@@ -18,7 +18,7 @@ async function main(): Promise<void> {
     process.stderr.write("--count 값은 1~20 사이의 정수여야 합니다.\n");
     process.exit(1);
   }
-  const count = countOverride !== undefined && !isNaN(countOverride) ? countOverride : undefined;
+  const count = countOverride;
 
   if (runNow || dryRun) {
     log.info({ event: "index.run_now", dryRun });
