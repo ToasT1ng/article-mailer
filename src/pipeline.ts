@@ -1,4 +1,4 @@
-import { Settings } from "./settings.js";
+import { Settings, getRecipients } from "./settings.js";
 import { HackerNewsCollector, crawlArticleContent } from "./collector/hackerNews.js";
 import { RSSCollector } from "./collector/rss.js";
 import { ArXivCollector } from "./collector/arxiv.js";
@@ -10,7 +10,8 @@ import logger from "./logger.js";
 
 const log = logger.child({ module: "pipeline" });
 
-export async function runPipeline(settings: Settings, options: { dryRun?: boolean } = {}): Promise<void> {
+export async function runPipeline(settings: Settings, options: { dryRun?: boolean; count?: number } = {}): Promise<void> {
+  const articleCount = options.count ?? settings.ARTICLE_COUNT;
   log.info({ event: "pipeline.start", dryRun: options.dryRun ?? false });
 
   const repo = new ArticleRepository(settings.DATA_PATH);
@@ -33,7 +34,7 @@ export async function runPipeline(settings: Settings, options: { dryRun?: boolea
   log.info({ event: "pipeline.collected", total: allArticles.length, unsent: unsent.length });
 
   if (options.dryRun) {
-    log.info({ event: "pipeline.dry_run", articles: sorted.slice(0, settings.ARTICLE_COUNT).map((a) => a.title) });
+    log.info({ event: "pipeline.dry_run", articles: sorted.slice(0, articleCount).map((a) => a.title) });
     return;
   }
 
@@ -44,12 +45,12 @@ export async function runPipeline(settings: Settings, options: { dryRun?: boolea
 
   const summarizer = new Summarizer(settings.GEMINI_API_KEY, settings.GEMINI_MODEL, settings.ARTICLE_LANGUAGE);
 
-  const screenCount = Math.min(sorted.length, settings.ARTICLE_COUNT * 3);
-  const screened = await summarizer.screen(sorted.slice(0, screenCount), Math.min(screenCount, settings.ARTICLE_COUNT * 2));
+  const screenCount = Math.min(sorted.length, articleCount * 3);
+  const screened = await summarizer.screen(sorted.slice(0, screenCount), Math.min(screenCount, articleCount * 2));
 
   const crawled = await crawlContents(screened);
 
-  const summaries = await summarizer.selectAndSummarize(crawled, settings.ARTICLE_COUNT);
+  const summaries = await summarizer.selectAndSummarize(crawled, Math.min(crawled.length, articleCount));
 
   if (summaries.length === 0) {
     log.warn({ event: "pipeline.no_summaries" });
@@ -63,7 +64,7 @@ export async function runPipeline(settings: Settings, options: { dryRun?: boolea
   repo.addLog({
     runAt: new Date().toISOString(),
     articleCount: summaries.length,
-    recipientCount: settings.RECIPIENT_EMAILS.split(",").filter(Boolean).length,
+    recipientCount: getRecipients(settings).length,
     status: "success",
   });
 
