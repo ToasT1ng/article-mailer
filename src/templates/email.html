@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light dark" />
+  <meta name="supported-color-schemes" content="light dark" />
   <title>[AI 데일리] {{formattedDate}} | 오늘의 AI 아티클 {{count}}선</title>
   <style>
     * { box-sizing: border-box; }
@@ -10,34 +12,34 @@
     .container { max-width: 660px; margin: 0 auto; }
 
     /* Header */
-    .header { background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%); padding: 36px 40px; border-radius: 16px 16px 0 0; }
-    .header-label { font-size: 11px; font-weight: 700; letter-spacing: 2px; color: #8b90c8; text-transform: uppercase; margin-bottom: 8px; }
-    .header h1 { color: #fff; margin: 0 0 6px; font-size: 26px; font-weight: 800; }
-    .header-sub { color: #9ca3c8; font-size: 14px; margin: 0; }
+    .header { background-color: #1e1b4b !important; padding: 36px 40px; border-radius: 16px 16px 0 0; }
+    .header-label { font-size: 11px; font-weight: 700; letter-spacing: 2px; color: #a5b4fc; text-transform: uppercase; margin-bottom: 8px; }
+    .header h1 { color: #ffffff; margin: 0 0 6px; font-size: 26px; font-weight: 800; }
+    .header-sub { color: #c7d2fe; font-size: 14px; margin: 0; }
 
     /* TOC */
     .toc { background: #fff; border-left: 4px solid #302b63; padding: 20px 28px; }
     .toc-title { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; color: #888; text-transform: uppercase; margin-bottom: 12px; }
-    .toc-item { display: flex; align-items: baseline; gap: 10px; padding: 5px 0; border-bottom: 1px solid #f5f5f5; }
+    .toc-item { display: block; padding: 5px 0; border-bottom: 1px solid #f5f5f5; overflow: hidden; }
     .toc-item:last-child { border-bottom: none; }
-    .toc-num { font-size: 11px; font-weight: 700; color: #302b63; width: 18px; flex-shrink: 0; }
-    .toc-text { font-size: 13px; color: #333; line-height: 1.4; }
+    .toc-num { font-size: 11px; font-weight: 700; color: #302b63; display: inline-block; width: 18px; vertical-align: top; padding-top: 2px; }
+    .toc-text { font-size: 13px; color: #333; line-height: 1.4; display: inline-block; width: calc(100% - 28px); vertical-align: top; }
 
     /* Articles */
     .content { background: #fff; padding: 8px 0; }
     .article { padding: 28px 40px; border-bottom: 1px solid #f0f0f0; }
     .article:last-child { border-bottom: none; }
 
-    .article-header { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
-    .article-num { width: 26px; height: 26px; background: #302b63; color: #fff; border-radius: 50%; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+    .article-header { display: block; margin-bottom: 14px; overflow: hidden; }
+    .article-num { width: 26px; height: 26px; background: #302b63; color: #fff; border-radius: 50%; font-size: 12px; font-weight: 700; display: inline-block; text-align: center; line-height: 26px; vertical-align: middle; margin-right: 6px; }
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; vertical-align: middle; }
     .badge-impact { background: #fff0e6; color: #c45e0a; }
     .badge-trend_industry { background: #eef2ff; color: #3730a3; }
     .badge-trend_llm { background: #f0fdf4; color: #166534; }
     .badge-importance-high { background: #fef2f2; color: #b91c1c; }
     .badge-importance-medium { background: #fffbeb; color: #92400e; }
     .badge-importance-low { background: #f0fdf4; color: #166534; }
-    .meta-right { margin-left: auto; font-size: 12px; color: #aaa; white-space: nowrap; }
+    .meta-right { float: right; font-size: 12px; color: #aaa; white-space: nowrap; line-height: 26px; }
 
     .article-title { margin: 0 0 12px; font-size: 18px; font-weight: 700; line-height: 1.45; }
     .article-title a { color: #0f0c29; text-decoration: none; }
@@ -48,8 +50,8 @@
 
     .body-text { font-size: 14px; color: #444; line-height: 1.8; margin: 0 0 16px; }
 
-    .article-footer { display: flex; align-items: center; }
-    .read-more { display: inline-block; padding: 8px 20px; background: #302b63; color: #fff; border-radius: 8px; font-size: 13px; text-decoration: none; font-weight: 600; margin-left: auto; }
+    .article-footer { display: block; text-align: right; }
+    .read-more { display: inline-block; padding: 8px 20px; background: #302b63; color: #fff; border-radius: 8px; font-size: 13px; text-decoration: none; font-weight: 600; }
 
     /* Footer */
     .footer { background: #f9f9fb; padding: 22px 40px; text-align: center; font-size: 12px; color: #aaa; border-radius: 0 0 16px 16px; border-top: 1px solid #eee; }
@@ -57,6 +59,7 @@
     /* Dark mode */
     @media (prefers-color-scheme: dark) {
       body { background: #1c1c22 !important; color: #c9cad4 !important; }
+      .header { background-color: #1e1b4b !important; }
       .toc { background: #24242e !important; border-left-color: #6b63c4 !important; }
       .toc-title { color: #7a7a8c !important; }
       .toc-num { color: #8b85cc !important; }
@@ -81,11 +84,15 @@
 </head>
 <body>
   <div class="container">
-    <div class="header">
-      <div class="header-label">AI Daily Newsletter</div>
-      <h1>오늘의 AI 아티클 {{count}}선</h1>
-      <p class="header-sub">{{formattedDate}}</p>
-    </div>
+    <table width="100%" cellpadding="0" cellspacing="0" bgcolor="#1e1b4b" style="background-color:#1e1b4b;border-radius:16px 16px 0 0;">
+      <tr>
+        <td style="padding:36px 40px;background-color:#1e1b4b;border-radius:16px 16px 0 0;">
+          <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:#a5b4fc;text-transform:uppercase;margin-bottom:8px;">AI Daily Newsletter</div>
+          <div style="color:#ffffff;margin:0 0 6px;font-size:26px;font-weight:800;line-height:1.3;">오늘의 AI 아티클 {{count}}선</div>
+          <div style="color:#c7d2fe;font-size:14px;margin:0;">{{formattedDate}}</div>
+        </td>
+      </tr>
+    </table>
 
     <div class="toc">
       <div class="toc-title">📋 Today's picks</div>
