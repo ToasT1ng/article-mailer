@@ -64,6 +64,8 @@ Gemini가 분류하는 3가지 카테고리:
 - 외부 HTTP 요청은 `vi.fn()` 또는 `vi.spyOn()`으로 모킹
 - Gemini API 호출 테스트 시 `vi.spyOn(summarizer['client'], ...)`으로 교체
 - 테스트 공통 fixture는 `tests/conftest` 대신 각 테스트 파일 내 `beforeEach`/`vi.mock` 활용
+- **실제 동작 검증은 `--dry-run` 모드로 진행한다.** (`node dist/index.js --dry-run` 또는 `npx tsx src/index.ts --dry-run`)
+- **실제 Gemini API를 호출하는 테스트(통합 테스트, E2E 등)는 반드시 사용자에게 확인을 구한 뒤 진행한다.** API 비용이 발생하므로 자의적으로 실행하지 않는다.
 
 ## 브랜치 전략
 

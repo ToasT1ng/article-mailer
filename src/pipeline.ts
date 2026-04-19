@@ -29,7 +29,11 @@ export async function runPipeline(settings: Settings, options: { dryRun?: boolea
   const deduped = deduplicateArticles(allArticles);
   const unsentUrlSet = new Set(repo.filterUnsent(deduped.map((a) => a.url)));
   const unsent = deduped.filter((a) => unsentUrlSet.has(a.url));
-  const sorted = unsent.sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime());
+  const sorted = unsent.sort((a, b) => {
+    // 최신순 기본 정렬, HN score 반영 (100점당 1시간 보정, 최대 500점=5시간 상한)
+    const scoreBoostMs = (Math.min(b.score ?? 0, 500) - Math.min(a.score ?? 0, 500)) * 36_000;
+    return (b.publishedAt.getTime() + scoreBoostMs) - a.publishedAt.getTime();
+  });
 
   log.info({ event: "pipeline.collected", total: allArticles.length, unsent: unsent.length });
 
@@ -90,14 +94,26 @@ function deduplicateArticles(articles: Article[]): Article[] {
   });
 }
 
+const CRAWL_CONCURRENCY = 4;
+
 async function crawlContents(articles: Article[]): Promise<Article[]> {
-  const results = await Promise.allSettled(
-    articles.map(async (article) => {
-      const content = await crawlArticleContent(article.url);
-      return { ...article, rawContent: content };
-    })
+  const results: Article[] = new Array(articles.length);
+  let idx = 0;
+
+  async function worker() {
+    while (idx < articles.length) {
+      const i = idx++;
+      try {
+        const content = await crawlArticleContent(articles[i].url);
+        results[i] = { ...articles[i], rawContent: content };
+      } catch {
+        results[i] = articles[i];
+      }
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(CRAWL_CONCURRENCY, articles.length) }, worker)
   );
-  return results.map((r, i) =>
-    r.status === "fulfilled" ? r.value : articles[i]
-  );
+  return results;
 }
