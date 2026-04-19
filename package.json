@@ -1,7 +1,7 @@
 {
   "name": "article-mailer",
-  "version": "0.0.2",
-  "description": "매일 AI 아티클을 수집·요약하여 이메일로 발송하는 자동화 도구",
+  "version": "0.0.3",
+  "description": "A daily automation tool that collects, summarizes, and delivers AI articles via email.",
   "main": "dist/index.js",
   "bin": {
     "article-mailer": "./bin/article-mailer.js"
