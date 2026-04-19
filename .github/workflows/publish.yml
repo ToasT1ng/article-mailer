@@ -19,6 +19,7 @@ jobs:
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
@@ -29,7 +30,20 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Check version not already published
+        id: version_check
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if npm view article-mailer@$VERSION version 2>/dev/null; then
+            echo "Version $VERSION already published — skipping."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "Version $VERSION not yet published — proceeding."
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Publish to npm
+        if: steps.version_check.outputs.skip == 'false'
         # --dry-run: 실제 배포 없이 배포 시뮬레이션만 수행합니다.
         # 실제 배포를 원하면 --dry-run 플래그를 제거하세요.
         run: npm publish --dry-run
