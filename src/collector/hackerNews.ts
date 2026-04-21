@@ -5,6 +5,7 @@ import { Readability } from "@mozilla/readability";
 import { parseHTML } from "linkedom";
 import { AbstractCollector, Article } from "./base.js";
 import logger from "../logger.js";
+import { isHttpUrl } from "../utils/url.js";
 
 const AI_KEYWORDS = ["ai", "llm", "gpt", "ml", "machine learning", "neural", "deep learning", "openai", "gemini", "claude", "anthropic", "mistral"];
 const HN_API = "https://hacker-news.firebaseio.com/v0";
@@ -21,6 +22,7 @@ interface HNItem {
 }
 
 export async function crawlArticleContent(url: string): Promise<string | undefined> {
+  if (!isHttpUrl(url)) return undefined;
   try {
     const res = await fetch(url, {
       signal: AbortSignal.timeout(10_000),

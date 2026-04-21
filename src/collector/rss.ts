@@ -2,6 +2,7 @@ import Parser from "rss-parser";
 import { readFileSync, existsSync } from "fs";
 import { AbstractCollector, Article } from "./base.js";
 import logger from "../logger.js";
+import { isHttpUrl } from "../utils/url.js";
 
 const USER_AGENT =
   "Mozilla/5.0 (compatible; article-mailer/1.0; +https://github.com/toasting/article-mailer)";
@@ -26,9 +27,14 @@ function loadExtraFeeds(feedsPath: string): Array<{ url: string; source: string 
       logger.warn({ event: "rss.feeds_invalid", path: feedsPath, reason: "배열이 아님" });
       return [];
     }
-    return (parsed as FeedEntry[]).filter(
-      (f) => typeof f.url === "string" && typeof f.source === "string"
-    );
+    return (parsed as FeedEntry[]).filter((f) => {
+      if (typeof f.url !== "string" || typeof f.source !== "string") return false;
+      if (!isHttpUrl(f.url)) {
+        logger.warn({ event: "rss.feed_url_invalid", url: f.url, source: f.source });
+        return false;
+      }
+      return true;
+    });
   } catch (err) {
     logger.warn({ event: "rss.feeds_load_failed", path: feedsPath, error: String(err) });
     return [];
