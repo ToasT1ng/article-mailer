@@ -2,6 +2,7 @@ import Parser from "rss-parser";
 import { readFileSync, existsSync } from "fs";
 import { AbstractCollector, Article } from "./base.js";
 import logger from "../logger.js";
+import { isHttpUrl } from "../utils/url.js";
 
 const USER_AGENT =
   "Mozilla/5.0 (compatible; article-mailer/1.0; +https://github.com/toasting/article-mailer)";
@@ -15,15 +16,6 @@ const DEFAULT_FEEDS: Array<{ url: string; source: string }> = [
 interface FeedEntry {
   url: string;
   source: string;
-}
-
-function isHttpUrl(url: string): boolean {
-  try {
-    const { protocol } = new URL(url);
-    return protocol === "http:" || protocol === "https:";
-  } catch {
-    return false;
-  }
 }
 
 function loadExtraFeeds(feedsPath: string): Array<{ url: string; source: string }> {

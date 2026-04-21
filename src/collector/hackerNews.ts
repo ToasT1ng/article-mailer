@@ -5,6 +5,7 @@ import { Readability } from "@mozilla/readability";
 import { parseHTML } from "linkedom";
 import { AbstractCollector, Article } from "./base.js";
 import logger from "../logger.js";
+import { isHttpUrl } from "../utils/url.js";
 
 const AI_KEYWORDS = ["ai", "llm", "gpt", "ml", "machine learning", "neural", "deep learning", "openai", "gemini", "claude", "anthropic", "mistral"];
 const HN_API = "https://hacker-news.firebaseio.com/v0";
@@ -18,15 +19,6 @@ interface HNItem {
   score: number;
   time: number;
   text?: string;
-}
-
-function isHttpUrl(url: string): boolean {
-  try {
-    const { protocol } = new URL(url);
-    return protocol === "http:" || protocol === "https:";
-  } catch {
-    return false;
-  }
 }
 
 export async function crawlArticleContent(url: string): Promise<string | undefined> {
