@@ -20,7 +20,17 @@ interface HNItem {
   text?: string;
 }
 
+function isHttpUrl(url: string): boolean {
+  try {
+    const { protocol } = new URL(url);
+    return protocol === "http:" || protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 export async function crawlArticleContent(url: string): Promise<string | undefined> {
+  if (!isHttpUrl(url)) return undefined;
   try {
     const res = await fetch(url, {
       signal: AbortSignal.timeout(10_000),

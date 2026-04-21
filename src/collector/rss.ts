@@ -17,6 +17,15 @@ interface FeedEntry {
   source: string;
 }
 
+function isHttpUrl(url: string): boolean {
+  try {
+    const { protocol } = new URL(url);
+    return protocol === "http:" || protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 function loadExtraFeeds(feedsPath: string): Array<{ url: string; source: string }> {
   if (!existsSync(feedsPath)) return [];
   try {
@@ -26,9 +35,14 @@ function loadExtraFeeds(feedsPath: string): Array<{ url: string; source: string 
       logger.warn({ event: "rss.feeds_invalid", path: feedsPath, reason: "배열이 아님" });
       return [];
     }
-    return (parsed as FeedEntry[]).filter(
-      (f) => typeof f.url === "string" && typeof f.source === "string"
-    );
+    return (parsed as FeedEntry[]).filter((f) => {
+      if (typeof f.url !== "string" || typeof f.source !== "string") return false;
+      if (!isHttpUrl(f.url)) {
+        logger.warn({ event: "rss.feed_url_invalid", url: f.url, source: f.source });
+        return false;
+      }
+      return true;
+    });
   } catch (err) {
     logger.warn({ event: "rss.feeds_load_failed", path: feedsPath, error: String(err) });
     return [];
