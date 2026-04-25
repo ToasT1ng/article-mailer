@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { z } from "zod";
 import { Article } from "./collector/base.js";
 import logger from "./logger.js";
 import { withRetry } from "./utils/retry.js";
@@ -13,19 +14,21 @@ export interface Summary {
   readTimeMin: number;
 }
 
-interface ScreenResult {
-  index: number;
-  category: "impact" | "trend_llm" | "trend_industry";
-}
+const categorySchema = z.enum(["impact", "trend_llm", "trend_industry"]);
 
-interface SummarizeResult {
-  index: number;
-  category: "impact" | "trend_llm" | "trend_industry";
-  one_liner: string;
-  body: string;
-  importance: "high" | "medium" | "low";
-  read_time_min: number;
-}
+const screenResultSchema = z.array(z.object({
+  index: z.number().int(),
+  category: categorySchema,
+}));
+
+const summarizeResultSchema = z.array(z.object({
+  index: z.number().int(),
+  category: categorySchema,
+  one_liner: z.string(),
+  body: z.string(),
+  importance: z.enum(["high", "medium", "low"]),
+  read_time_min: z.number(),
+}));
 
 
 export class Summarizer {
@@ -61,7 +64,7 @@ ${articles.map((a, i) => `[${i}] <article>\nTitle: ${a.title}\nSource: ${a.sourc
 
 Respond with a JSON array only: [{"index": 0, "category": "trend_industry"}, ...]`;
 
-    const result = await withRetry(() => this.callGemini<ScreenResult[]>(prompt));
+    const result = await withRetry(() => this.callGemini(prompt, screenResultSchema));
     const seen = new Set<number>();
     const selected: Article[] = [];
     for (const r of result) {
@@ -105,22 +108,18 @@ Respond with a JSON array only (category must be one of "trend_industry", "trend
 Respond in ${this.language}.
 Note: importance values must always be in English ("high", "medium", or "low"), regardless of the response language.`;
 
-    const results = await withRetry(() => this.callGemini<SummarizeResult[]>(prompt));
+    const results = await withRetry(() => this.callGemini(prompt, summarizeResultSchema));
     const seen = new Set<number>();
     const summaries: Summary[] = [];
     for (const r of results) {
       const article = articles[r.index];
       if (!article || seen.has(r.index)) continue;
       seen.add(r.index);
-      const importance: Summary["importance"] =
-        r.importance === "high" || r.importance === "medium" || r.importance === "low"
-          ? r.importance
-          : "medium";
       summaries.push({
         article: { ...article, category: r.category },
         oneLiner: r.one_liner,
         body: r.body,
-        importance,
+        importance: r.importance,
         readTimeMin: r.read_time_min,
       });
     }
@@ -128,13 +127,13 @@ Note: importance values must always be in English ("high", "medium", or "low"), 
     return summaries;
   }
 
-  private async callGemini<T>(prompt: string): Promise<T> {
+  private async callGemini<T>(prompt: string, schema: z.ZodType<T>): Promise<T> {
     const model = this.client.getGenerativeModel({
       model: this.modelName,
       generationConfig: { responseMimeType: "application/json" },
     });
     const result = await model.generateContent(prompt);
     const text = result.response.text();
-    return JSON.parse(text) as T;
+    return schema.parse(JSON.parse(text));
   }
 }
