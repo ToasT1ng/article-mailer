@@ -115,11 +115,12 @@ Note: importance values must always be in English ("high", "medium", or "low"), 
       const article = articles[r.index];
       if (!article || seen.has(r.index)) continue;
       seen.add(r.index);
+      const importanceAllowed = ["high", "medium", "low"] as const;
       summaries.push({
         article: { ...article, category: r.category },
         oneLiner: r.one_liner,
         body: r.body,
-        importance: r.importance,
+        importance: importanceAllowed.includes(r.importance as typeof importanceAllowed[number]) ? r.importance as typeof importanceAllowed[number] : "medium",
         readTimeMin: r.read_time_min,
       });
     }
