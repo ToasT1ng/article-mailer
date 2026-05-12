@@ -44,11 +44,13 @@ export async function sendMail(summaries: Summary[], settings: Settings): Promis
     formattedDate,
     count: summaries.length,
     items: summaries,
+    senderEmail: settings.SMTP_USER,
   };
 
   const html = htmlTemplate(templateData);
   const text = txtTemplate(templateData);
   const subject = `[AI 데일리] ${formattedDate} | 오늘의 AI 아티클 ${summaries.length}선`;
+  const unsubscribeMailto = `mailto:${settings.SMTP_USER}?subject=Unsubscribe`;
 
   const transporter = nodemailer.createTransport({
     host: settings.SMTP_HOST,
@@ -67,6 +69,10 @@ export async function sendMail(summaries: Summary[], settings: Settings): Promis
       subject,
       text,
       html,
+      headers: {
+        "List-Unsubscribe": `<${unsubscribeMailto}>`,
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      },
     });
   }, 3);
 

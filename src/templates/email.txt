@@ -23,3 +23,4 @@
 
 {{/each}}
 article-mailer · 자동 생성된 뉴스레터
+수신 거부: {{senderEmail}}으로 "Unsubscribe" 제목의 메일을 보내주세요.
