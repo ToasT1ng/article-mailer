@@ -1,6 +1,7 @@
 import cron from "node-cron";
 import { loadSettings, ARTICLE_COUNT_MAX } from "./settings.js";
 import { runPipeline } from "./pipeline.js";
+import { sendErrorMail } from "./mailer.js";
 import logger from "./logger.js";
 
 const log = logger.child({ module: "index" });
@@ -22,7 +23,13 @@ async function main(): Promise<void> {
 
   if (runNow || dryRun) {
     log.info({ event: "index.run_now", dryRun });
-    await runPipeline(settings, { dryRun, count });
+    try {
+      await runPipeline(settings, { dryRun, count });
+    } catch (err) {
+      log.error({ event: "index.run_error", error: String(err) });
+      if (!dryRun) await sendErrorMail(err, settings);
+      process.exit(1);
+    }
     process.exit(0);
   }
 
@@ -37,6 +44,7 @@ async function main(): Promise<void> {
         await runPipeline(settings);
       } catch (err) {
         log.error({ event: "index.cron_error", error: String(err) });
+        await sendErrorMail(err, settings);
       }
     },
     { timezone: settings.TIMEZONE }
