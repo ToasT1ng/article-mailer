@@ -1,0 +1,11 @@
+node_modules
+dist
+data
+.env
+.env.*
+*.md
+tests
+docs
+memory
+.git
+.idea

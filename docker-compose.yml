@@ -6,3 +6,5 @@ services:
     env_file: .env
     volumes:
       - ./data:/app/data
+      # 커스텀 RSS 피드를 사용할 경우 아래 주석 해제
+      # - ./feeds.json:/app/feeds.json:ro
