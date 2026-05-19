@@ -110,12 +110,12 @@ Note: importance values must always be in English ("high", "medium", or "low"), 
 
     const results = await withRetry(() => this.callGemini(prompt, summarizeResultSchema));
     const seen = new Set<number>();
+    const importanceAllowed = ["high", "medium", "low"] as const;
     const summaries: Summary[] = [];
     for (const r of results) {
       const article = articles[r.index];
       if (!article || seen.has(r.index)) continue;
       seen.add(r.index);
-      const importanceAllowed = ["high", "medium", "low"] as const;
       summaries.push({
         article: { ...article, category: r.category },
         oneLiner: r.one_liner,

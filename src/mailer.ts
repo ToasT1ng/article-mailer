@@ -71,7 +71,6 @@ export async function sendMail(summaries: Summary[], settings: Settings): Promis
       html,
       headers: {
         "List-Unsubscribe": `<${unsubscribeMailto}>`,
-        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
       },
     });
   }, 3);
@@ -92,12 +91,14 @@ export async function sendErrorMail(err: unknown, settings: Settings): Promise<v
   const now = new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" });
 
   try {
-    await transporter.sendMail({
-      from: `"AI 데일리" <${settings.SMTP_USER}>`,
-      to: settings.SMTP_USER,
-      subject: `[AI 데일리] 파이프라인 실패 알림 — ${now}`,
-      text: `파이프라인 실행 중 오류가 발생했습니다.\n\n${message}${stack}`,
-    });
+    await withRetry(async () => {
+      await transporter.sendMail({
+        from: `"AI 데일리" <${settings.SMTP_USER}>`,
+        to: settings.SMTP_USER,
+        subject: `[AI 데일리] 파이프라인 실패 알림 — ${now}`,
+        text: `파이프라인 실행 중 오류가 발생했습니다.\n\n${message}${stack}`,
+      });
+    }, 2);
     log.info({ event: "mailer.error_sent" });
   } catch (mailErr) {
     log.error({ event: "mailer.error_send_failed", error: String(mailErr) });

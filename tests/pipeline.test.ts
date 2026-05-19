@@ -57,6 +57,7 @@ const settings: Settings = {
   SMTP_PASSWORD: "pw",
   RECIPIENT_EMAILS: "a@example.com",
   DATA_PATH: "/tmp/test-pipeline.json",
+  FEEDS_PATH: "/tmp/test-feeds.json",
 };
 
 function makeArticle(i: number): Article {
